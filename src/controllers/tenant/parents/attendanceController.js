@@ -34,7 +34,7 @@ module.exports = {
       const timezone = req.tenant?.timezone || "UTC";
       const attendanceByStudent = {};
       let attendanceQuery = childIds.length
-        ? Attendance.find({ student: { $in: childIds }, isDeleted: { $ne: true }, migrationQuarantinedAt: null })
+        ? Attendance.find(studentAttendanceFilter({ $in: childIds }))
             .populate({ path: "subject", model: Subject, select: "code title shortTitle" })
         : null;
       if (attendanceQuery && Staff) attendanceQuery = attendanceQuery.populate({ path: "teacher", model: Staff, select: "fullName name" });

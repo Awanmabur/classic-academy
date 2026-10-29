@@ -37,7 +37,7 @@ test('Admin Parents exposes real CSV import/export and shared lifecycle actions'
   const routes = read('src/routes/tenant/admin/parents.js');
   const ctrl = read('src/controllers/tenant/admin/parentsController.js');
   assert.match(routes, /router\.get\("\/export", ctrl\.exportCsv\)/);
-  assert.match(routes, /router\.post\("\/import", upload\.single\("file"\), ctrl\.importCsv\)/);
+  assert.match(routes, /router\.post\("\/import", upload\.single\("file"\),\s*validateCsvUpload,\s*ctrl\.importCsv\)/);
   assert.match(ctrl, /applyParentLifecycle\(/);
   assert.match(ctrl, /validateChildren\(/);
   assert.match(ctrl, /assertParentAccountCompatibility/);
@@ -53,8 +53,9 @@ test('new Parent CSV rows roll back when account linkage fails instead of report
 test('Parent portal authentication requires a linked active Parent record', () => {
   const auth = read('src/middleware/tenant/requireTenantAuth.js');
   assert.match(auth, /primaryRole === "parent"/);
-  assert.match(auth, /userId: user\._id/);
-  assert.match(auth, /status: \{ \$in: \["active", "on_hold"\] \}/);
+  assert.match(auth, /as: "_parentAuthority"/);
+  assert.match(auth, /\$eq: \["\$userId", "\$\$userId"\]/);
+  assert.match(auth, /\$in: \["\$status", \["active", "on_hold"\]\]/);
   assert.match(auth, /Parent access disabled/);
 });
 

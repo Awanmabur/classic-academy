@@ -115,8 +115,35 @@ async function migratePlatformConfig(models) {
       branding,
       security,
     };
-    await PlatformConfig.updateOne({ _id: keeper._id }, { $set: patch });
-    normalized = 1;
+
+    const current = {
+      singletonKey: text(keeper.singletonKey, 40),
+      revision: Math.max(1, Number(keeper.revision || 1)),
+      general: {
+        platformName: keeper.general?.platformName ?? "",
+        baseDomain: keeper.general?.baseDomain ?? "",
+        defaultTimezone: keeper.general?.defaultTimezone ?? "",
+        defaultCurrency: keeper.general?.defaultCurrency ?? "",
+      },
+      branding: {
+        primaryColor: keeper.branding?.primaryColor ?? "",
+        accentColor: keeper.branding?.accentColor ?? "",
+        supportEmail: keeper.branding?.supportEmail ?? "",
+      },
+      security: {
+        passwordMinLength: keeper.security?.passwordMinLength,
+        sessionTimeoutMinutes: keeper.security?.sessionTimeoutMinutes,
+        requireSuperadminEmail2fa: keeper.security?.requireSuperadminEmail2fa,
+      },
+    };
+
+    if (JSON.stringify(current) !== JSON.stringify(patch)) {
+      await PlatformConfig.updateOne(
+        { _id: keeper._id },
+        { $set: patch },
+      );
+      normalized = 1;
+    }
   }
 
   const keeperId = String(keeper._id || "");
@@ -180,7 +207,14 @@ async function migrateSupportTickets(SupportTicket) {
 
 async function migrateAuditLogs(AuditLog) {
   if (!AuditLog) return { scanned: 0, scrubbed: 0 };
-  const rows = await leanRows(AuditLog, {});
+  let query = AuditLog.find({});
+  if (typeof query.select === "function") {
+    query = query.select("+ipHash");
+  }
+  const rows = typeof query.lean === "function"
+    ? await query.lean()
+    : await query;
+
   let scrubbed = 0;
   for (const row of rows) {
     const sanitized = sanitizeAuditFields({

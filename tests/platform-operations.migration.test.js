@@ -125,6 +125,75 @@ test('config migration keeps newest singleton and removes older duplicates',asyn
   assert.equal(PlatformConfig.rows.length,1);assert.equal(PlatformConfig.rows[0]._id,'new');assert.equal(PlatformConfig.rows[0].singletonKey,'platform');assert.equal(PlatformConfig.rows[0].revision,4);assert.equal(PlatformConfig.rows[0].general.platformName,'New');assert.equal(PlatformConfig.rows[0].general.defaultTimezone,DEFAULT_CONFIG.general.defaultTimezone);
 });
 
+
+test('config migration does not rewrite an already canonical singleton', async () => {
+  const canonical = {
+    _id: 'cfg',
+    singletonKey: 'platform',
+    revision: 1,
+    general: clone(DEFAULT_CONFIG.general),
+    branding: clone(DEFAULT_CONFIG.branding),
+    security: clone(DEFAULT_CONFIG.security),
+    updatedAt: new Date('2026-01-01T00:00:00Z'),
+  };
+
+  let updates = 0;
+
+  const PlatformConfig = {
+    find() {
+      return {
+        lean: async () => [clone(canonical)],
+      };
+    },
+    async updateOne() {
+      updates += 1;
+      return { matchedCount: 1, modifiedCount: 1 };
+    },
+    async deleteOne() {
+      throw new Error('canonical singleton must not be deleted');
+    },
+  };
+
+  const result = await migratePlatformConfig({
+    PlatformConfig,
+    PlatformSetting: memoryModel([]),
+  });
+
+  assert.equal(result.normalized, 0);
+  assert.equal(updates, 0);
+});
+
+test('audit migration explicitly selects hidden ipHash and preserves sanitized rows', async () => {
+  const hash = 'a'.repeat(64);
+  let selected = '';
+
+  const AuditLog = {
+    find() {
+      return {
+        select(value) {
+          selected = value;
+          return this;
+        },
+        lean: async () => [{
+          _id: 'audit-1',
+          ipAddress: '10.20.30.0',
+          ipHash: hash,
+          userAgent: 'UA',
+          meta: { safe: true },
+        }],
+      };
+    },
+    async updateOne() {
+      throw new Error('already sanitized audit row must not be rewritten');
+    },
+  };
+
+  const result = await migrateAuditLogs(AuditLog);
+
+  assert.equal(selected, '+ipHash');
+  assert.equal(result.scrubbed, 0);
+});
+
 // Platform users
 test('platform user migration repairs missing or invalid revision and token version',async()=>{
   const model=memoryModel([{_id:'u1',revision:0,tokenVersion:-2},{_id:'u2',revision:3,tokenVersion:4}]);

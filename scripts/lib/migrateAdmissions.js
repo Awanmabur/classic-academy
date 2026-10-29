@@ -61,9 +61,15 @@ async function migrateAdmissions(models = {}) {
     const lockAt = applicant.conversionLockAt ? new Date(applicant.conversionLockAt) : null;
     const staleLock = lockAt && !Number.isNaN(lockAt.getTime()) && lockAt.getTime() < Date.now() - (15 * 60 * 1000);
     if (applicant.status === "converted" || staleLock) {
-      patch.conversionLockToken = "";
-      patch.conversionLockAt = null;
-      patch.conversionLockBy = null;
+      if (text(applicant.conversionLockToken, 80)) {
+        patch.conversionLockToken = "";
+      }
+      if (applicant.conversionLockAt != null) {
+        patch.conversionLockAt = null;
+      }
+      if (applicant.conversionLockBy != null) {
+        patch.conversionLockBy = null;
+      }
     }
     const stats = documentCompleteness(applicant);
     if (applicant.reviewChecklist?.documentsComplete === true && stats.uploaded < stats.total) {

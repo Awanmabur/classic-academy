@@ -27,7 +27,8 @@ test('roles routes implement filtered export and lifecycle actions', () => {
 
 test('custom role permissions are loaded per authenticated staff request', () => {
   const auth = read('src/middleware/tenant/requireTenantAuth.js');
-  assert.match(auth, /StaffRole\.findOne/);
+  assert.match(auth, /as: "_staffRoleAuthority"/);
+  assert.match(auth, /const accessRole = authority\.staffRoleAuthority/);
   assert.match(auth, /accessPermissions:/);
   assert.match(auth, /normalizePermissionList/);
   const permission = read('src/middleware/tenant/requireTenantPermission.js');

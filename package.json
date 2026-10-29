@@ -62,7 +62,8 @@
     "check:views": "node scripts/check-ejs-views.js",
     "check:csrf": "node scripts/check-authenticated-form-csrf.js",
     "seo:indexnow": "node scripts/submit-indexnow.js",
-    "check:seo": "node scripts/check-seo-discovery.js"
+    "check:seo": "node scripts/check-seo-discovery.js",
+    "seed:platform": "node scripts/seed_platform.js"
   },
   "keywords": [],
   "author": "",

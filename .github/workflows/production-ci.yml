@@ -1,0 +1,57 @@
+name: Classic Academy production CI
+
+on:
+  push:
+    branches: [production]
+  pull_request:
+    branches: [production]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: classic-academy-production-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.11.1'
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci --include=optional
+
+      - name: Release hygiene
+        run: npm run check:hygiene
+
+      - name: JavaScript syntax
+        run: npm run check:syntax
+
+      - name: EJS views
+        run: npm run check:views
+
+      - name: Static media
+        run: npm run check:media
+
+      - name: SEO and AI discovery
+        run: npm run check:seo
+
+      - name: Authenticated form CSRF coverage
+        run: npm run check:csrf
+
+      - name: Regression suite
+        run: npm test
+
+      - name: Production dependency vulnerability gate
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Build production image
+        run: docker build --pull -t classic-academy:${{ github.sha }} .

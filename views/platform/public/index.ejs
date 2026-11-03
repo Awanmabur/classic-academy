@@ -18,8 +18,8 @@
   <meta name="format-detection" content="telephone=no" />
 
   <link rel="canonical" href="https://www.classicacademy.app/" />
-  <link rel="icon" href="/img/academylogo.png" />
-  <link rel="apple-touch-icon" href="/img/academylogo.png" />
+  <link rel="icon" href="//img/academylogo.webp" />
+  <link rel="apple-touch-icon" href="//img/academylogo.webp" />
 
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
@@ -48,7 +48,7 @@
     "@type": "Organization",
     "name": "Classic Academy",
     "url": "https://www.classicacademy.app/",
-    "logo": "https://www.classicacademy.app/img/academylogo.png",
+    "logo": "https://www.classicacademy.app//img/academylogo.webp",
     "contactPoint": [{
       "@type": "ContactPoint",
       "telephone": "+256781977217",
@@ -2252,14 +2252,14 @@
       }
     }
   </style>
-<link rel="preload" as="image" href="/img/hero.png" fetchpriority="high" />
+<link rel="preload" as="image" href="//img/hero.webp" fetchpriority="high" />
   <link rel="stylesheet" href="/css/classic-motion.css">
 </head>
 
 <body>
   <div id="loader">
     <div class="academylogo">
-      <img src="./img/academylogo.png" alt="Classic Academy logo">
+      <img src="/img/academylogo.webp" alt="Classic Academy logo">
     </div>
     <div style="display:flex; gap:10px;">
       <div class="loader">
@@ -2288,7 +2288,7 @@
   <!-- Nav -->
   <header class="header" id="siteHeader">
     <a href="/" class="brand" aria-label="Classic Academy Home">
-      <img class="brand-mark" src="./img/academylogo.png" alt="Classic Academy logo">
+      <img class="brand-mark" src="/img/academylogo.webp" alt="Classic Academy logo">
       <div class="brand-txt">
         <span class="brand-name">Classic Academy</span>
         <span class="brand-sub">School management + admissions</span>
@@ -2352,7 +2352,7 @@
 
       <div class="hero-media">
         <div class="hero-image">
-          <img src="./img/hero.png" alt="School Building">
+          <img src="/img/hero.webp" alt="School Building" loading="eager" decoding="async" fetchpriority="high">
         </div>
 
         <div class="hero-note" aria-label="Quick note">
@@ -2410,7 +2410,7 @@
                 name: "Classic Academy",
                 type: "Featured School",
                 description: "Explore public school profiles, subjects, admissions and updates on Classic Academy.",
-                image: "/img/hero.png",
+                image: "//img/hero.webp",
                 href: "/schools",
                 applyHref: "/schools",
                 location: "Browse schools",
@@ -2446,8 +2446,8 @@
                 <% } %>
               </div>
               <div class="school-card-actions">
-                <a href="<%= school.href %>">Learn More</a>
-                <a class="ghost" href="<%= school.applyHref || school.href %>">Apply</a>
+                <a href="<%= school.href %>" aria-label="View school profile for <%= school.name %>">Learn More</a>
+                <a class="ghost" href="<%= school.applyHref || school.href %>" aria-label="Apply to <%= school.name %>">Apply</a>
               </div>
             </div>
           </div>
@@ -2466,7 +2466,7 @@
 
     <div class="orbit-section">
       <div class="orbit-center">
-        <img src="img/feature.png" alt="Center Icon" />
+        <img src="/img/feature.webp" alt="Center Icon" />
       </div>
 
       <div class="orbit-ring">

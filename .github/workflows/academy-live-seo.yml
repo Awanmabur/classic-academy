@@ -59,8 +59,16 @@ jobs:
           if fetch "/robots.txt" robots; then
             check robots 'User-agent: OAI-SearchBot' 'AI search crawler allowed'
             check robots "Sitemap: $SITE/sitemap.xml" 'registered sitemap location'
-            if grep -Eiq '^[[:space:]]*Disallow:[[:space:]]*/[[:space:]]*$' "$TEMP/robots"; then
-              echo "::error::Live robots.txt has a blanket Disallow root rule"
+            # A blanket GPTBot block intentionally opts out of model training.
+            # Only block broad crawlers if the wildcard or OAI-SearchBot group says so.
+            if ! awk '
+              /^[[:space:]]*User-agent:/ { agent=tolower($2) }
+              /^[[:space:]]*Disallow:[[:space:]]*\/[[:space:]]*$/ {
+                if (agent=="*" || agent=="oai-searchbot" || agent=="googlebot") blocked=1
+              }
+              END { exit blocked ? 1 : 0 }
+            ' "$TEMP/robots"; then
+              echo "::error::Google or AI search crawling is blocked at the root"
               failures=$((failures+1))
             fi
           fi

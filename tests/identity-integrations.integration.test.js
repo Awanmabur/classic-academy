@@ -29,9 +29,14 @@ test('resend invite cannot be used as a password-reset bypass for active account
 
 test('staff and lecturer portal auth now requires reciprocal active Staff identity',()=>{
   const src=read('src/middleware/tenant/requireTenantAuth.js');
+  assert.match(src,/const \[authority\] = await User\.aggregate\(/);
+  assert.match(src,/from: Staff\.collection\.name/);
+  assert.match(src,/\{ \$eq: \["\$_id", "\$\$staffId"\] \}/);
+  assert.match(src,/\{ \$eq: \["\$userId", "\$\$userId"\] \}/);
+  assert.match(src,/\["Suspended", "Exited"\]/);
   assert.match(src,/STAFF_PORTAL_ROLES\.includes\(primaryRole\)/);
-  assert.match(src,/if \(!user\.staffId \|\| !req\.models\?\.Staff\)/);
-  assert.match(src,/userId: user\._id/); assert.match(src,/\["Suspended", "Exited"\]/);
+  assert.match(src,/!user\.staffId \|\| !staffRecord/);
+  assert.match(src,/Staff access disabled/);
 });
 
 test('all tenant invitation consumers share HMAC hashRawToken contract and atomic claim compensation',()=>{

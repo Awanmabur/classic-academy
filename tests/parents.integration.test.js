@@ -53,9 +53,11 @@ test('new Parent CSV rows roll back when account linkage fails instead of report
 
 test('Parent portal authentication requires a linked active Parent record', () => {
   const auth = read('src/middleware/tenant/requireTenantAuth.js');
-  assert.match(auth, /primaryRole === "parent"/);
-  assert.match(auth, /userId: user\._id/);
-  assert.match(auth, /status: \{ \$in: \["active", "on_hold"\] \}/);
+  assert.match(auth, /const \[authority\] = await User\.aggregate\(/);
+  assert.match(auth, /from: Parent\.collection\.name/);
+  assert.match(auth, /\{ \$eq: \["\$userId", "\$\$userId"\] \}/);
+  assert.match(auth, /\{ \$in: \["\$status", \["active", "on_hold"\]\] \}/);
+  assert.match(auth, /primaryRole === "parent" && !authority\.parentAuthority/);
   assert.match(auth, /Parent access disabled/);
 });
 

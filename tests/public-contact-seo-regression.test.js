@@ -58,18 +58,13 @@ test("every advertised general enquiry form uses one live handler, not a fake su
   assert.match(read("src/routes/platform/pages.js"), /router\.post\("\/api\/public-contact", publicInquiryLimiter, publicContact\)/);
 });
 
-test("mobile hero uses a real, small WebP with fallback and correct dimensions", () => {
-  const image = fs.readFileSync(path.join(root, "public/img/hero.webp"));
-  assert.equal(image.toString("ascii", 0, 4), "RIFF");
-  assert.equal(image.toString("ascii", 8, 12), "WEBP");
-  assert.ok(image.length < 200_000, "WebP should be smaller than 200kB");
+test("approved hero image markup is preserved and optional optimized asset is available", () => {
   const html = read("views/platform/public/index.ejs");
-  assert.match(html, /preload" as="image" href="\/img\/hero\.webp"/);
-  assert.match(html, /<picture><source srcset="\/img\/hero\.webp"/);
   assert.match(html, /<img src="\.\/img\/hero\.png" alt="School Building">/);
-  if (image.toString("ascii", 12, 16) === "VP8X") {
-    const width = 1 + image[24] + (image[25] << 8) + (image[26] << 16);
-    const height = 1 + image[27] + (image[28] << 8) + (image[29] << 16);
-    assert.deepEqual([width, height], [1600, 1379]);
-  }
+  assert.match(html, /preload" as="image" href="\/img\/hero\.png"/);
+  assert.ok(!html.includes("<picture>"), "The approved image DOM contract must stay unchanged.");
+  const optimized = fs.readFileSync(path.join(root, "public/img/hero.webp"));
+  assert.equal(optimized.toString("ascii", 0, 4), "RIFF");
+  assert.equal(optimized.toString("ascii", 8, 12), "WEBP");
+  assert.ok(optimized.length < 200_000, "Optimized future asset should be smaller than 200 kB.");
 });

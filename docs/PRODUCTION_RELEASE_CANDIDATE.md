@@ -15,6 +15,21 @@ npm audit --omit=dev --audit-level=high
 
 Do not deploy if either command fails for a dependency/security reason. A transient registry/network failure must be resolved and the commands repeated.
 
+## Initial SuperAdmin bootstrap (new, empty platform databases only)
+
+The bootstrap is **not part of deployment, migrations, or startup**. Only use it during an authorized first installation after configuring database credentials. It refuses to run if **any** PlatformUser already exists. Existing installations must use their authenticated platform administration and recovery processes rather than seeding another admin.
+
+Set `PLATFORM_SEED_ADMIN_EMAIL`, `PLATFORM_SEED_ADMIN_FIRST_NAME`, and `PLATFORM_SEED_ADMIN_LAST_NAME` as environment variables. Provide a unique password of at least 16 characters meeting the uppercase, lowercase, digit, and symbol policy, without placing the secret in shell history. On the secure installation host:
+
+```bash
+read -rsp 'Initial SuperAdmin password: ' PLATFORM_SEED_ADMIN_PASSWORD; echo
+export PLATFORM_SEED_ADMIN_PASSWORD
+npm run seed:platform-admin
+unset PLATFORM_SEED_ADMIN_PASSWORD
+```
+
+The command creates a persistent one-time MongoDB claim in `_bootstrap_state` to prevent parallel provisioning. If an attempt fails after the claim, inspect the platform user and claim records before manual recovery; **never** delete the claim blindly or retry by changing the bootstrap identity. Keep a restricted audit of who authorized the initial bootstrap.
+
 ## 2. Production configuration
 
 Configure secrets in the deployment platform; do not place them in the repository or ZIP.

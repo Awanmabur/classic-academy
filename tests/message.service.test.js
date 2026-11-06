@@ -27,6 +27,7 @@ function emptyAudienceModels() {
     models: {
       User: { find: () => chain([]) },
       MessageRecipient: {
+        aggregate: async () => [],
         deleteMany: async (filter) => { deletions.push(filter); return { deletedCount: 0 }; },
         countDocuments: async () => 0,
         bulkWrite: async () => ({ ok: 1 }),
@@ -93,6 +94,7 @@ test("opening a delivered message updates the canonical recipient and delivery s
   const req = {
     models: {
       MessageRecipient: {
+        aggregate: async () => [{ recipients: 1, delivered: 1, opened: 1, failed: 0 }],
         updateOne: async (filter, patch) => { recipientUpdates.push({ filter, patch }); return { modifiedCount: 1 }; },
         countDocuments: async (filter) => {
           if (filter.status === "Opened") return 1;

@@ -14,7 +14,8 @@ const contactSchema = z.object({
   source: z.enum(["home", "about", "contact", "benefits", "admissions", "plan"]).optional().default("home"),
 }).strict();
 
-async function publicContact(req, res) {
+function createPublicContact(deliverEmail = sendMail) {
+  return async function publicContact(req, res) {
   res.set("Cache-Control", "no-store");
   // Prevent browser-origin cross-site submissions. Server-to-server callers
   // still face the distributed rate limiter and the strict data validation.
@@ -56,7 +57,7 @@ async function publicContact(req, res) {
   ].join("\n");
 
   try {
-    const result = await sendMail({
+    const result = await deliverEmail({
       to: process.env.CLASSIC_ACADEMY_CONTACT_TO || "info@classictechgroup.com",
       subject: "Classic Academy enquiry: " + subjectTopic,
       replyTo: data.email,
@@ -74,4 +75,7 @@ async function publicContact(req, res) {
   }
 }
 
-module.exports = { publicContact, contactSchema };
+}
+
+const publicContact = createPublicContact(sendMail);
+module.exports = { publicContact, contactSchema, createPublicContact };

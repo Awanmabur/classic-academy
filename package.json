@@ -10,6 +10,7 @@
     "check": "npm run check:syntax && npm run check:views",
     "indexes": "node scripts/create-indexes.js",
     "seed:school-profile": "node scripts/seed-school-profile.js",
+    "seed:platform-admin": "node scripts/seed_platform.js",
     "test": "node --test tests/*.test.js",
     "verify:helpdesk": "node --test tests/helpdesk*.test.js && node scripts/verify-helpdesk.js",
     "migrate:helpdesk": "node scripts/migrate-helpdesk.js",

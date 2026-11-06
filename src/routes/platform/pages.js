@@ -6,6 +6,7 @@ const { publicInquiryLimiter, publicReviewLimiter } = require("../../middleware/
 
 const ctrl = require("../../controllers/platform/schoolsPublicController");
 const publicSearchController = require("../../controllers/platform/publicSearchController");
+const { publicContact } = require("../../controllers/platform/publicContactController");
 const { platformConnection } = require("../../config/db");
 const Tenant = require("../../models/platform/Tenant")(platformConnection);
 const { addOperationalTenantCondition } = require("../../services/platformPublicDirectoryService");
@@ -59,6 +60,7 @@ router.get("/benefits", (req, res) => res.render("platform/public/benefits"));
 // router.get("/schools", (req, res) => res.render("platform/public/schools"));
 // router.get("/search", (req, res) => res.render("platform/public/search"));
 router.get("/contact", (req, res) => res.render("platform/public/contact"));
+router.post("/api/public-contact", publicInquiryLimiter, publicContact);
 router.get("/schedule", (req, res) => res.render("platform/public/schedule"));
 router.get("/plan", (req, res) => res.render("platform/public/plan"));
 router.get("/blog", (req, res) => res.render("platform/public/blog"));

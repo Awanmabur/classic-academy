@@ -50,31 +50,5 @@
 
         document.querySelectorAll(".reveal").forEach(el => io.observe(el));
 
-        // Contact form stub (replace with your backend endpoint)
-        function getVal(id) { return (document.getElementById(id)?.value || "").trim(); }
 
-        document.getElementById("contactSendBtn")?.addEventListener("click", () => {
-            const payload = {
-                name: getVal("contact_name"),
-                school: getVal("contact_school"),
-                email: getVal("contact_email"),
-                phone: getVal("contact_phone"),
-                topic: getVal("contact_topic"),
-                message: getVal("contact_message"),
-                source: "contact-page"
-            };
-
-            // Basic validation (HTML required also covers)
-            if (!payload.name || !payload.email || !payload.phone || !payload.topic || !payload.message) {
-                alert("Please fill in all required fields.");
-                return;
-            }
-
-            // ✅ Replace this block with fetch('/api/contact', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
-            console.log("Contact payload:", payload);
-            alert("Message captured. (Connect this to your backend/email endpoint.)");
-
-            // reset
-            document.getElementById("contactForm")?.reset();
-        });
      

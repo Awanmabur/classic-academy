@@ -25,7 +25,8 @@ test('Admin Admissions routes expose real review workflow actions', () => {
     '/applicants/:id/email',
     '/applicants/:id/sms',
   ]) assert.ok(src.includes(route), `missing ${route}`);
-  assert.match(src, /upload\.single\("file"\), ctrl\.uploadApplicantDocument/);
+  assert.match(src, /upload\.single\("file"\), validateDocs, ctrl\.uploadApplicantDocument/);
+  assert.match(src, /validateBufferedUploads/);
 });
 
 test('Admin Admissions controller has one status handler and uses shared lifecycle/service rules', () => {

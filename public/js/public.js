@@ -1,8 +1,9 @@
-    // Loader
+    // Keep the branded intro while avoiding a fixed two-second render blocker.
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     setTimeout(() => {
       const loader = document.getElementById("loader");
       if (loader) loader.style.display = "none";
-    }, 2000);
+    }, reducedMotion ? 0 : 450);
 
     const navbar = document.querySelector('.header .navbar');
     const menuBtn = document.getElementById('menu-btn');

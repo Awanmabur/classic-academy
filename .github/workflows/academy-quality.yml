@@ -1,0 +1,37 @@
+name: Classic Academy quality gates
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: academy-quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  code-and-seo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Set up approved Node runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.11.1
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Verify syntax, EJS templates and SEO discovery
+        run: |
+          npm run check
+          npm run check:seo
+          npm run check:csrf
+      - name: Run existing and new regression tests
+        run: npm test

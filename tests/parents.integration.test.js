@@ -37,7 +37,8 @@ test('Admin Parents exposes real CSV import/export and shared lifecycle actions'
   const routes = read('src/routes/tenant/admin/parents.js');
   const ctrl = read('src/controllers/tenant/admin/parentsController.js');
   assert.match(routes, /router\.get\("\/export", ctrl\.exportCsv\)/);
-  assert.match(routes, /router\.post\("\/import", upload\.single\("file"\), ctrl\.importCsv\)/);
+  assert.match(routes, /router\.post\("\/import", upload\.single\("file"\), validateCsvUpload, ctrl\.importCsv\)/);
+  assert.match(routes, /createCsvUpload/);
   assert.match(ctrl, /applyParentLifecycle\(/);
   assert.match(ctrl, /validateChildren\(/);
   assert.match(ctrl, /assertParentAccountCompatibility/);

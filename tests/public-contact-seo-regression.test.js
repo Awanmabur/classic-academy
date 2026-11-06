@@ -80,7 +80,7 @@ test("valid enquiries reach SMTP with reply-to and a sanitized subject", async (
     school: "Example School",
     email: "teacher@example.org",
     phone: "+256700000000",
-    topic: "Admissions\\r\\nBcc: attacker@example.org",
+    topic: "Admissions\r\nBcc: attacker@example.org",
     message: "Please arrange a demonstration for our school.",
     source: "contact",
     website: "",
@@ -92,7 +92,7 @@ test("valid enquiries reach SMTP with reply-to and a sanitized subject", async (
   assert.equal(messages.length, 1);
   assert.equal(messages[0].replyTo, body.email);
   assert.equal(messages[0].to, "info@classictechgroup.com");
-  assert.ok(!/[\\r\\n]/.test(messages[0].subject), "SMTP subject must not contain newlines");
+  assert.ok(!/[\r\n]/.test(messages[0].subject), "SMTP subject must not contain newlines");
   assert.match(messages[0].text, /Example School/);
 });
 

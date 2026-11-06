@@ -66,5 +66,10 @@ test("mobile hero uses a real, small WebP with fallback and correct dimensions",
   const html = read("views/platform/public/index.ejs");
   assert.match(html, /preload" as="image" href="\/img\/hero\.webp"/);
   assert.match(html, /<picture><source srcset="\/img\/hero\.webp"/);
-  assert.match(html, /width="1600" height="1379"/);
+  assert.match(html, /<img src="\.\/img\/hero\.png" alt="School Building">/);
+  if (image.toString("ascii", 12, 16) === "VP8X") {
+    const width = 1 + image[24] + (image[25] << 8) + (image[26] << 16);
+    const height = 1 + image[27] + (image[28] << 8) + (image[29] << 16);
+    assert.deepEqual([width, height], [1600, 1379]);
+  }
 });

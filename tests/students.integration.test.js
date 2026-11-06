@@ -30,7 +30,8 @@ test('registration allocator uses atomic Counter and never Math.random', () => {
 test('Admin Students routes expose real filtered export and CSV import', () => {
   const src = read('src/routes/tenant/admin/students.js');
   assert.match(src, /router\.get\("\/export", ctrl\.exportCsv\)/);
-  assert.match(src, /router\.post\("\/import", upload\.single\("file"\), ctrl\.importCsv\)/);
+  assert.match(src, /router\.post\("\/import", upload\.single\("file"\), validateCsvUpload, ctrl\.importCsv\)/);
+  assert.match(src, /createCsvUpload/);
   assert.doesNotMatch(src, /\/\/ router\.get\("\/export"/);
 });
 

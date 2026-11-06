@@ -87,10 +87,6 @@
 
     document.querySelectorAll(".feature, .hero, .reveal").forEach(el => io.observe(el));
 
-    // Contact form stub
-    document.getElementById("contactSendBtn")?.addEventListener("click", () => {
-      alert("Message captured. (Connect this to your backend/email endpoint.)");
-    });
    
     const PLAN_ORDER = ["profile", "starter", "standard", "growth", "premium"];
     const PLANS = {

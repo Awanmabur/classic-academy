@@ -3,7 +3,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const { contactSchema, publicContact } = require("../src/controllers/platform/publicContactController");
+const { contactSchema, publicContact, createPublicContact } = require("../src/controllers/platform/publicContactController");
 
 const root = path.resolve(__dirname, "..");
 const read = (p) => fs.readFileSync(path.join(root, p), "utf8");
@@ -67,4 +67,75 @@ test("approved hero image markup is preserved and optional optimized asset is av
   assert.equal(optimized.toString("ascii", 0, 4), "RIFF");
   assert.equal(optimized.toString("ascii", 8, 12), "WEBP");
   assert.ok(optimized.length < 200_000, "Optimized future asset should be smaller than 200 kB.");
+});
+
+test("valid enquiries reach SMTP with reply-to and a sanitized subject", async () => {
+  const messages = [];
+  const handler = createPublicContact(async (mail) => {
+    messages.push(mail);
+    return { accepted: ["info@classictechgroup.com"] };
+  });
+  const body = {
+    name: "Prospective Headteacher",
+    school: "Example School",
+    email: "teacher@example.org",
+    phone: "+256700000000",
+    topic: "Admissions\\r\\nBcc: attacker@example.org",
+    message: "Please arrange a demonstration for our school.",
+    source: "contact",
+    website: "",
+  };
+  const res = response();
+  await handler(request(body), res);
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.payload.ok, true);
+  assert.equal(messages.length, 1);
+  assert.equal(messages[0].replyTo, body.email);
+  assert.equal(messages[0].to, "info@classictechgroup.com");
+  assert.ok(!/[\\r\\n]/.test(messages[0].subject), "SMTP subject must not contain newlines");
+  assert.match(messages[0].text, /Example School/);
+});
+
+test("contact failures stay visible and do not fake a successful delivery", async () => {
+  let attempts = 0;
+  const handler = createPublicContact(async () => {
+    attempts++;
+    throw Object.assign(new Error("Sensitive SMTP error details"), { code: "ECONNECTION" });
+  });
+  const body = {
+    name: "Valid Person",
+    school: "Example School",
+    email: "person@example.org",
+    phone: "+256700000000",
+    topic: "Demo",
+    message: "Please contact our school to discuss the platform.",
+    source: "home",
+    website: "",
+  };
+  const responseFailure = response();
+  const log = console.error;
+  console.error = () => {};
+  try {
+    await handler(request(body), responseFailure);
+  } finally {
+    console.error = log;
+  }
+  assert.equal(attempts, 1);
+  assert.equal(responseFailure.statusCode, 503);
+  assert.equal(responseFailure.payload.ok, false);
+  assert.doesNotMatch(responseFailure.payload.message, /Sensitive SMTP error/);
+
+  const emptyHoneypot = createPublicContact(async () => {
+    throw new Error("Honeypot should not send");
+  });
+  const spam = response();
+  await emptyHoneypot(request({ ...body, website: "spam.example" }), spam);
+  assert.equal(spam.statusCode, 200);
+});
+
+test("Origin enforcement fails closed for a foreign website", async () => {
+  const handler = createPublicContact(async () => { throw Error("should not send"); });
+  const responseDenied = response();
+  await handler(request({}, { origin: "https://attacker.example" }), responseDenied);
+  assert.equal(responseDenied.statusCode, 403);
 });

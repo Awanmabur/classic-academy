@@ -2401,8 +2401,8 @@
   <div class="featured-schoolsp">
     <h2>Featured Schools</h2>
     <p class="schoolsp">
-      Explore some of the top-performing schools using Classic Academy platform. These schools stand out for excellence
-      in academics, infrastructure, innovation, and student success.
+      Browse publicly available school profiles on Classic Academy, including school information, admissions
+      and updates where the schools have chosen to publish them.
     </p>
   </div>
 
@@ -2413,21 +2413,7 @@
           const featuredSchoolsList = Array.isArray(typeof featuredSchools !== "undefined" ? featuredSchools : null)
             ? featuredSchools
             : [];
-          const carouselSchools = featuredSchoolsList.length
-            ? featuredSchoolsList
-            : [{
-                name: "Classic Academy",
-                type: "Featured School",
-                description: "Explore public school profiles, subjects, admissions and updates on Classic Academy.",
-                image: "/img/hero.png",
-                href: "/schools",
-                applyHref: "/schools",
-                location: "Browse schools",
-                students: 0,
-                subjects: 0,
-                rating: 0,
-                badge: "Featured"
-              }];
+          const carouselSchools = featuredSchoolsList;
         %>
         <% carouselSchools.forEach(function(school){ %>
           <div class="card school-card">
@@ -2461,6 +2447,15 @@
             </div>
           </div>
         <% }) %>
+        <% if (!carouselSchools.length) { %>
+          <div class="card school-card">
+            <div class="card-content">
+              <h3>Explore the School Directory</h3>
+              <p>Browse public school profiles and admissions information as schools publish them.</p>
+              <div class="school-card-actions"><a href="/schools">Browse Schools</a></div>
+            </div>
+          </div>
+        <% } %>
       </div>
     </div>
   </section>

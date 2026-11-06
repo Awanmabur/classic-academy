@@ -53,10 +53,18 @@ test('active platform structure builder renders saved tenant data without HTML s
 test('platform tenant structure bootstrap JSON is RCDATA escaped and only the hardened builder is loaded',()=>{for(const f of ['views/platform/tenants/create.ejs','views/platform/tenants/edit.ejs']){const s=read(f);assert.match(s,/JSON\.stringify\(initialSchoolUnits\).*\\\\u003c/);assert.match(s,/\/js\/campus-structure-builder\.js/);assert.doesNotMatch(s,/\/js\/tenant\.js/);}assert.match(read('views/platform/tenants/create.ejs'),/script nonce="<%= cspNonce/);});
 
 
-test("platform seed requires an environment-supplied SuperAdmin password and never logs it", () => {
+test("platform seed requires one-time strong environment-supplied credentials", () => {
   const src = read("scripts/seed_platform.js");
   assert.match(src, /process\.env\.PLATFORM_SEED_ADMIN_PASSWORD/);
-  assert.match(src, /adminPassword\.length < 12/);
-  assert.doesNotMatch(src, /Awan&akoor@#124/);
-  assert.doesNotMatch(src, /SuperAdmin created:.*adminPassword/);
+  assert.match(src, /PASSWORD_MIN_LENGTH = 16/);
+  assert.match(src, /adminPassword\.length < PASSWORD_MIN_LENGTH/);
+  assert.match(src, /PlatformUser\.exists\(\{\}\)/);
+  assert.match(src, /_bootstrap_state/);
+  assert.match(src, /platform-initial-superadmin/);
+  assert.match(src, /bcrypt\.hash\(adminPassword, 12\)/);
+  assert.match(src, /No credentials were printed/);
+  assert.doesNotMatch(src, /console\.log\([^\n]*adminPassword/);
+  const pkg = JSON.parse(read("package.json"));
+  assert.equal(pkg.scripts["seed:platform-admin"], "node scripts/seed_platform.js");
+  assert.ok(!String(pkg.scripts.start).includes("seed_platform"));
 });

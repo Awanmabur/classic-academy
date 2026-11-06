@@ -2455,8 +2455,8 @@
                 <% } %>
               </div>
               <div class="school-card-actions">
-                <a href="<%= school.href %>">Learn More</a>
-                <a class="ghost" href="<%= school.applyHref || school.href %>">Apply</a>
+                <a href="<%= school.href %>" aria-label="View <%= school.name %> school profile">View <%= school.name %> Profile</a>
+                <a class="ghost" href="<%= school.applyHref || school.href %>" aria-label="Apply to <%= school.name %>">Apply</a>
               </div>
             </div>
           </div>

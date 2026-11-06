@@ -1635,11 +1635,17 @@
       color: #16a34a;
     }
 
+    /* Keep the 9px visual dot while giving each control a 28px touch target. */
     .swiper-pagination-bullet {
-      width: 9px;
-      height: 9px;
-      opacity: .28;
+      width: 28px;
+      height: 28px;
+      margin: 0 2px !important;
+      border-radius: 50%;
+      background: radial-gradient(circle at center, #4a90e2 0 4.5px, transparent 4.6px);
+      opacity: .55;
     }
+    .swiper-pagination-bullet:focus-visible { outline: 2px solid #075b9b; outline-offset: 2px; }
+    .swiper-pagination-bullet-active { opacity: 1; }
 
     .swiper-pagination-bullet-active {
       opacity: .9;
@@ -2251,6 +2257,9 @@
         height: min(420px, 70vw);
       }
     }
+    /* Accessibility: readable text without changing the established brand color. */
+    .nav-actions a.btn, .hero-btn a.btn { background-color: #2168ac; color: #fff; }
+    .feature-intro h3 span { color: #287db8 !important; }
   </style>
 <link rel="preload" as="image" href="/img/hero.png" fetchpriority="high" />
   <link rel="stylesheet" href="/css/classic-motion.css">
@@ -2352,7 +2361,7 @@
 
       <div class="hero-media">
         <div class="hero-image">
-          <img src="./img/hero.png" alt="School Building">
+          <img src="./img/hero.png" alt="School building illustrating the Classic Academy platform" fetchpriority="high" decoding="async">
         </div>
 
         <div class="hero-note" aria-label="Quick note">
@@ -2901,7 +2910,7 @@
             <article class="tcard">
               <div class="tquote">
                 <div class="qmark" aria-hidden="true"><i class="fa-solid fa-quote-left"></i></div>
-                <div class="stars" aria-label="5 stars">
+                <div class="stars" role="img" aria-label="5 out of 5 stars">
                   <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i
                     class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
                 </div>
@@ -2928,7 +2937,7 @@
             <article class="tcard">
               <div class="tquote">
                 <div class="qmark" aria-hidden="true"><i class="fa-solid fa-quote-left"></i></div>
-                <div class="stars" aria-label="5 stars">
+                <div class="stars" role="img" aria-label="5 out of 5 stars">
                   <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i
                     class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
                 </div>
@@ -2955,7 +2964,7 @@
             <article class="tcard">
               <div class="tquote">
                 <div class="qmark" aria-hidden="true"><i class="fa-solid fa-quote-left"></i></div>
-                <div class="stars" aria-label="5 stars">
+                <div class="stars" role="img" aria-label="5 out of 5 stars">
                   <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i
                     class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
                 </div>
@@ -2982,7 +2991,7 @@
             <article class="tcard">
               <div class="tquote">
                 <div class="qmark" aria-hidden="true"><i class="fa-solid fa-quote-left"></i></div>
-                <div class="stars" aria-label="5 stars">
+                <div class="stars" role="img" aria-label="5 out of 5 stars">
                   <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i
                     class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
                 </div>
@@ -3009,7 +3018,7 @@
             <article class="tcard">
               <div class="tquote">
                 <div class="qmark" aria-hidden="true"><i class="fa-solid fa-quote-left"></i></div>
-                <div class="stars" aria-label="5 stars">
+                <div class="stars" role="img" aria-label="5 out of 5 stars">
                   <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i
                     class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
                 </div>
@@ -3036,7 +3045,7 @@
             <article class="tcard">
               <div class="tquote">
                 <div class="qmark" aria-hidden="true"><i class="fa-solid fa-quote-left"></i></div>
-                <div class="stars" aria-label="5 stars">
+                <div class="stars" role="img" aria-label="5 out of 5 stars">
                   <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i
                     class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
                 </div>
@@ -3258,17 +3267,17 @@
   <button id="toTopBtn" aria-label="Scroll to top">↑</button>
 
   <!-- Floating support button -->
-  <div class="fab-container" aria-hidden="true">
+  <div class="fab-container" aria-label="Contact options">
     <div class="fab shadow">
       <div class="fab-content">
         <span class="material-icons">support_agent</span>
       </div>
     </div>
     <div class="sub-button shadow">
-      <a href="tel:+256781977217"><span class="material-icons">phone</span></a>
+      <a href="tel:+256781977217" aria-label="Call Classic Academy"><span class="material-icons" aria-hidden="true">phone</span></a>
     </div>
     <div class="sub-button shadow">
-      <a href="https://api.whatsapp.com/send?phone=256781977217" target="_blank" rel="noopener noreferrer">
+      <a href="https://api.whatsapp.com/send?phone=256781977217" target="_blank" rel="noopener noreferrer" aria-label="Contact Classic Academy on WhatsApp">
         <span class="material-icons">
           <svg xmlns="http://www.w3.org/2000/svg" class="whatsapp-icon" viewBox="0 0 448 512" width="35" height="35"
             fill="#2e2e2e" aria-label="WhatsApp Icon">

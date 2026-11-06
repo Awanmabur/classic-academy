@@ -115,8 +115,6 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
   <style nonce="<%= cspNonce %>">
-    .academy-visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-
     * {
       margin: 0;
       padding: 0;
@@ -1637,17 +1635,11 @@
       color: #16a34a;
     }
 
-    /* Keep the 9px visual dot while giving each control a 28px touch target. */
     .swiper-pagination-bullet {
-      width: 28px;
-      height: 28px;
-      margin: 0 2px !important;
-      border-radius: 50%;
-      background: radial-gradient(circle at center, #4a90e2 0 4.5px, transparent 4.6px);
-      opacity: .55;
+      width: 9px;
+      height: 9px;
+      opacity: .28;
     }
-    .swiper-pagination-bullet:focus-visible { outline: 2px solid #075b9b; outline-offset: 2px; }
-    .swiper-pagination-bullet-active { opacity: 1; }
 
     .swiper-pagination-bullet-active {
       opacity: .9;
@@ -2259,11 +2251,8 @@
         height: min(420px, 70vw);
       }
     }
-    /* Accessibility: readable text without changing the established brand color. */
-    .nav-actions a.btn, .hero-btn a.btn { background-color: #2168ac; color: #fff; }
-    .feature-intro h3 span { color: #287db8 !important; }
   </style>
-<link rel="preload" as="image" href="/img/hero.webp" type="image/webp" fetchpriority="high" />
+<link rel="preload" as="image" href="/img/hero.png" fetchpriority="high" />
   <link rel="stylesheet" href="/css/classic-motion.css">
 </head>
 
@@ -2324,7 +2313,6 @@
     </div>
   </header>
 
-  <main id="main-content">
   <!-- Hero -->
   <section class="hero" aria-label="Hero">
     <div class="hero-inner">
@@ -2364,7 +2352,7 @@
 
       <div class="hero-media">
         <div class="hero-image">
-          <picture><source srcset="/img/hero.webp" type="image/webp"><img src="./img/hero.png" alt="School Building"></picture>
+          <img src="./img/hero.png" alt="School Building">
         </div>
 
         <div class="hero-note" aria-label="Quick note">
@@ -2378,7 +2366,6 @@
 
   <!-- Feature tiles -->
   <section class="features" aria-label="School management features">
-    <h2 class="academy-visually-hidden">School management features</h2>
     <div class="feature">
       <img src="https://img.icons8.com/ios-filled/50/4a90e2/document.png" alt="School Profiles">
       <h3>School Profiles</h3>
@@ -2417,7 +2404,22 @@
           const featuredSchoolsList = Array.isArray(typeof featuredSchools !== "undefined" ? featuredSchools : null)
             ? featuredSchools
             : [];
-          const carouselSchools = featuredSchoolsList;
+          const carouselSchools = featuredSchoolsList.length
+            ? featuredSchoolsList
+            : [{
+                isDirectory: true,
+                name: "School Directory",
+                type: "School Directory",
+                description: "Browse school profiles and admissions information published by participating schools.",
+                image: "/img/hero.png",
+                href: "/schools",
+                applyHref: "/schools",
+                location: "Browse schools",
+                students: 0,
+                subjects: 0,
+                rating: 0,
+                badge: "Browse"
+              }];
         %>
         <% carouselSchools.forEach(function(school){ %>
           <div class="card school-card">
@@ -2445,21 +2447,13 @@
                 <% } %>
               </div>
               <div class="school-card-actions">
-                <a href="<%= school.href %>" aria-label="View <%= school.name %> school profile">View <%= school.name %> Profile</a>
-                <a class="ghost" href="<%= school.applyHref || school.href %>" aria-label="Apply to <%= school.name %>">Apply</a>
+                <a href="<%= school.href %>" aria-label="<%= school.isDirectory ? "Browse the school directory" : "View " + school.name + " school profile" %>"><%= school.isDirectory ? "Browse Schools" : "View " + school.name + " Profile" %></a>
+                <a class="ghost" href="<%= school.applyHref || school.href %>" aria-label="<%= school.isDirectory ? "Explore schools" : "Apply to " + school.name %>"><%= school.isDirectory ? "Explore Schools" : "Apply" %></a>
               </div>
             </div>
           </div>
         <% }) %>
-        <% if (!carouselSchools.length) { %>
-          <div class="card school-card">
-            <div class="card-content">
-              <h3>Explore the School Directory</h3>
-              <p>Browse public school profiles and admissions information as schools publish them.</p>
-              <div class="school-card-actions"><a href="/schools">Browse Schools</a></div>
-            </div>
-          </div>
-        <% } %>
+
       </div>
     </div>
   </section>
@@ -3258,8 +3252,6 @@
       </div>
     </div>
   </section>
-
-  </main>
 
   <%- include("../partials/footer") %>
 

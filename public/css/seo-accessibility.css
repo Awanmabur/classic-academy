@@ -1,0 +1,25 @@
+/* Accessibility adjustments layered on the approved Classic Academy design.
+ * Keep the original primary stylesheet and exact approved layout unchanged. */
+.nav-actions a.btn,
+.hero-btn a.btn {
+  background-color: #2168ac;
+  color: #fff;
+}
+.feature-intro h3 span {
+  color: #287db8 !important;
+}
+/* Match the original 9px pagination dot visually but provide a touch target. */
+.swiper-pagination .swiper-pagination-bullet {
+  box-sizing: border-box;
+  width: 28px !important;
+  height: 28px !important;
+  margin: 0 2px !important;
+  border-radius: 50%;
+  background: radial-gradient(circle at center, #4a90e2 0 4.5px, transparent 4.6px);
+  opacity: .55;
+}
+.swiper-pagination .swiper-pagination-bullet-active { opacity: 1; }
+.swiper-pagination .swiper-pagination-bullet:focus-visible {
+  outline: 2px solid #075b9b;
+  outline-offset: 2px;
+}

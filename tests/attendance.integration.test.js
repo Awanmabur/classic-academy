@@ -28,7 +28,16 @@ test('student dashboard and subjects no longer use legacy attendance studentId r
 });
 
 test('parent attendance and child detail use canonical student ownership field only',()=>{
-  for(const f of ['src/controllers/tenant/parents/attendanceController.js','src/controllers/tenant/parents/childViewsController.js']){const src=read(f);assert.match(src,/studentAttendanceFilter\(/);assert.doesNotMatch(src,/Attendance\.find\(\{[\s\S]{0,220}(?:studentId|\$or)/);}
+  const bulk=read('src/controllers/tenant/parents/attendanceController.js');
+  assert.match(bulk, /getParent\(req\)/);
+  assert.match(bulk, /parent\?\.childrenStudentIds/);
+  assert.match(bulk, /Attendance\.find\(\{ student: \{ \$in: childIds \}, isDeleted: \{ \$ne: true \}, migrationQuarantinedAt: null \}\)/);
+  assert.doesNotMatch(bulk, /Attendance\.find\(\{ studentId:/);
+  const child=read('src/controllers/tenant/parents/childViewsController.js');
+  assert.match(child, /canAccessChild\(parent, studentId\)/);
+  assert.match(child, /loadLinkedChild\(req, parent, studentId\)/);
+  assert.match(child, /Attendance\.find\(studentAttendanceFilter\(student\._id\)\)/);
+  assert.doesNotMatch(child, /Attendance\.find\(\{ studentId:/);
 });
 
 test('student and parent attendance rate use one shared policy',()=>{

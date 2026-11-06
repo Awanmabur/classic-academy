@@ -1,0 +1,107 @@
+name: Classic Academy live SEO and contact smoke
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: academy-live-seo-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  live-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Diagnose deployed public domain independently
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          SITE="https://www.classicacademy.app"
+          TEMP="$(mktemp -d)"
+          trap 'rm -rf "$TEMP"' EXIT
+          failures=0
+
+          fetch() {
+            local path="$1" name="$2" code
+            code="$(curl -sSL --compressed --max-time 25 --retry 2 \
+              --retry-delay 2 -o "$TEMP/$name" \
+              -w '%{http_code}' "$SITE$path" || true)"
+            printf '%-22s HTTP %-3s %s bytes\n' "$path" "$code" "$(wc -c < "$TEMP/$name" 2>/dev/null || echo 0)"
+            if [ "$code" != 200 ]; then
+              echo "::error::Live path $path returned HTTP $code instead of 200"
+              failures=$((failures+1))
+              return 1
+            fi
+            return 0
+          }
+
+          check() {
+            local filename="$1" needle="$2" label="$3"
+            if grep -Fq "$needle" "$TEMP/$filename"; then
+              printf 'PASS: %s\n' "$label"
+            else
+              echo "::error::Missing on live site: $label"
+              failures=$((failures+1))
+            fi
+          }
+
+          if fetch "/" home; then
+            printf 'Live title: '
+            grep -oE '<title>[^<]*</title>' "$TEMP/home" | head -1 || true
+            check home 'School Management System & Admissions Software | Classic Academy' 'updated homepage SEO title'
+            check home 'https://www.classicacademy.app/' 'www canonical'
+          fi
+          if fetch "/robots.txt" robots; then
+            check robots 'User-agent: OAI-SearchBot' 'AI search crawler allowed'
+            check robots "Sitemap: $SITE/sitemap.xml" 'registered sitemap location'
+            # A blanket GPTBot block intentionally opts out of model training.
+            # Only block broad crawlers if the wildcard or OAI-SearchBot group says so.
+            if ! awk '
+              /^[[:space:]]*User-agent:/ { agent=tolower($2) }
+              /^[[:space:]]*Disallow:[[:space:]]*\/[[:space:]]*$/ {
+                if (agent=="*" || agent=="oai-searchbot" || agent=="googlebot") blocked=1
+              }
+              END { exit blocked ? 1 : 0 }
+            ' "$TEMP/robots"; then
+              echo "::error::Google or AI search crawling is blocked at the root"
+              failures=$((failures+1))
+            fi
+          fi
+          if fetch "/sitemap.xml" sitemap; then
+            check sitemap '<urlset' 'XML sitemap'
+            for path in "/about" "/contact" "/admissions" "/security" "/plan"; do
+              check sitemap "$SITE$path" "sitemap includes $path"
+            done
+          fi
+          if fetch "/llms.txt" llms; then
+            check llms 'Classic Academy' 'AI discovery document'
+            check llms "$SITE/sitemap.xml" 'AI discovery sitemap link'
+          fi
+          if fetch "/contact" contact; then
+            check contact 'info@classictechgroup.com' 'correct corporate contact email'
+            check contact 'src="/js/public-contact.js"' 'real contact form script'
+          fi
+          if fetch "/js/public-contact.js" contact_js; then
+            check contact_js '"/api/public-contact"' 'live contact API client'
+          fi
+          if fetch "/privacy" privacy; then
+            check privacy 'Classic Academy' 'public privacy policy'
+          fi
+
+          # Invalid request; never creates a contact enquiry or sends email.
+          code="$(curl -sS --max-time 20 -o "$TEMP/contact-result" \
+            -w '%{http_code}' -X POST "$SITE/api/public-contact" \
+            -H 'Content-Type: application/json' -H 'Accept: application/json' \
+            --data '{}' || true)"
+          printf '/api/public-contact     POST invalid -> HTTP %s\n' "$code"
+          if [ "$code" != "400" ]; then
+            echo "::error::Live contact validation endpoint is not deployed or is misconfigured"
+            failures=$((failures+1))
+          fi
+          printf 'LIVE_AUDIT_FAILURES=%s\n' "$failures"
+          test "$failures" -eq 0

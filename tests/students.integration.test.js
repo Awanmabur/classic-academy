@@ -30,7 +30,8 @@ test('registration allocator uses atomic Counter and never Math.random', () => {
 test('Admin Students routes expose real filtered export and CSV import', () => {
   const src = read('src/routes/tenant/admin/students.js');
   assert.match(src, /router\.get\("\/export", ctrl\.exportCsv\)/);
-  assert.match(src, /router\.post\("\/import", upload\.single\("file"\),\s*validateCsvUpload,\s*ctrl\.importCsv\)/);
+  assert.match(src, /router\.post\("\/import", upload\.single\("file"\), validateCsvUpload, ctrl\.importCsv\)/);
+  assert.match(src, /createCsvUpload/);
   assert.doesNotMatch(src, /\/\/ router\.get\("\/export"/);
 });
 
@@ -66,10 +67,13 @@ test('Student status suspension revokes sessions and reactivation only reverses 
 
 test('student portal auth validates the linked active Student record', () => {
   const src = read('src/middleware/tenant/requireTenantAuth.js');
+  assert.match(src, /const \[authority\] = await User\.aggregate\(/);
+  assert.match(src, /from: Student\.collection\.name/);
+  assert.match(src, /\{ \$eq: \["\$_id", "\$\$studentId"\] \}/);
+  assert.match(src, /\{ \$eq: \["\$userId", "\$\$userId"\] \}/);
+  assert.match(src, /\["suspended", "archived"\]/);
   assert.match(src, /primaryRole === "student"/);
-  assert.match(src, /as: "_studentAuthority"/);
-  assert.match(src, /\$eq: \["\$_id", "\$\$studentId"\]/);
-  assert.match(src, /\$not: \[\{ \$in: \["\$status", \["suspended", "archived"\]\] \}\]/);
+  assert.match(src, /!user\.studentId \|\| !authority\.studentAuthority/);
   assert.match(src, /Student access disabled/);
 });
 

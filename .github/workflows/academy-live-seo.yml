@@ -1,0 +1,71 @@
+name: Classic Academy live SEO and contact smoke
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: academy-live-seo-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  live-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Check the actual public Academy website
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          SITE="https://www.classicacademy.app"
+          TEMP="$(mktemp -d)"
+          trap 'rm -rf "$TEMP"' EXIT
+
+          fetch() {
+            local path="$1" name="$2"
+            curl -fsSL --compressed --max-time 25 --retry 2 \
+              --retry-delay 2 "$SITE$path" -o "$TEMP/$name"
+            printf '%-22s %s bytes\n' "$path" "$(wc -c < "$TEMP/$name")"
+          }
+
+          fetch "/" homepage
+          grep -Fq 'School Management System & Admissions Software | Classic Academy' "$TEMP/homepage"
+          grep -Fq 'https://www.classicacademy.app/' "$TEMP/homepage"
+
+          fetch "/robots.txt" robots
+          grep -Fq "User-agent: OAI-SearchBot" "$TEMP/robots"
+          grep -Fq "Sitemap: $SITE/sitemap.xml" "$TEMP/robots"
+          ! grep -Eiq '^[[:space:]]*Disallow:[[:space:]]*/[[:space:]]*$' "$TEMP/robots"
+
+          fetch "/sitemap.xml" sitemap
+          grep -Fq "<urlset" "$TEMP/sitemap"
+          for path in "/about" "/contact" "/admissions" "/security" "/plan"; do
+            grep -Fq "$SITE$path" "$TEMP/sitemap"
+          done
+
+          fetch "/llms.txt" llms
+          grep -Fq "Classic Academy" "$TEMP/llms"
+          grep -Fq "$SITE/sitemap.xml" "$TEMP/llms"
+
+          fetch "/contact" contact
+          grep -Fq 'info@classictechgroup.com' "$TEMP/contact"
+          grep -Fq 'src="/js/public-contact.js"' "$TEMP/contact"
+
+          fetch "/js/public-contact.js" contact_js
+          grep -Fq '"/api/public-contact"' "$TEMP/contact_js"
+
+          # Deliberately invalid data: safe to run in production, sends no email.
+          code="$(curl -sS --max-time 20 -o "$TEMP/invalid-contact.json" \
+            -w '%{http_code}' -X POST "$SITE/api/public-contact" \
+            -H 'Content-Type: application/json' \
+            -H 'Accept: application/json' \
+            --data '{}')"
+          test "$code" = "400"
+          grep -Fq '"ok":false' "$TEMP/invalid-contact.json"
+
+          fetch "/privacy" privacy
+          echo "PASS: live Classic Academy SEO, AI crawl discovery and contact validation"

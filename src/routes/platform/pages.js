@@ -114,7 +114,14 @@ router.get("/sitemap.xml", async (req, res) => {
     "/schools", "/security", "/integrations", "/resources", "/docs",
   ];
 
-  const entries = staticPaths.map((path) => ({ loc: `${base}${path}`, lastmod: null }));
+  // Actual public marketing copy, shared footer links and the homepage media
+  // were updated in this release. Keep dates factual rather than using "now"
+  // on every request, which would falsely signal daily content changes.
+  const refreshedPublicPaths = new Set(["/", "/about", "/benefits", "/contact", "/admissions"]);
+  const entries = staticPaths.map((path) => ({
+    loc: `${base}${path}`,
+    lastmod: refreshedPublicPaths.has(path) ? "2026-11-06" : null,
+  }));
   try {
     const tenants = await Tenant.find(addOperationalTenantCondition({
       isDeleted: { $ne: true },

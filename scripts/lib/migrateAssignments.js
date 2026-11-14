@@ -71,7 +71,12 @@ async function dropConflictingSubmissionIndexes(
     if (
       await dropIndexIfPresent(
         AssignmentSubmission.collection,
-        idx.name
+        idx.name,
+        {
+          replacementName: SUBMISSION_INDEX_NAME,
+          replacementFields: SUBMISSION_INDEX_KEY,
+          replacementOptions: { unique: true, name: SUBMISSION_INDEX_NAME, partialFilterExpression: { migrationQuarantinedAt: null } },
+        }
       )
     ) {
       dropped += 1;
@@ -96,7 +101,7 @@ function comparePreferred(a,b){const aa=preferredSubmissionScore(a),bb=preferred
 async function migrateAssignments(models = {}) {
   const { Assignment, AssignmentSubmission, Subject, Class, Student } = models;
   if (!Assignment || !AssignmentSubmission || !Subject || !Class || !Student) return { skipped: true, reason: "Assignment, AssignmentSubmission, Subject, Class and Student models are required" };
-  const droppedIndexes = await dropConflictingSubmissionIndexes(AssignmentSubmission);
+  let droppedIndexes = 0;
   const [assignmentRows, submissionRows, subjects, classes, students] = await Promise.all([
     Assignment.collection.find({}).toArray(), AssignmentSubmission.collection.find({}).toArray(), Subject.collection.find({}).toArray(), Class.collection.find({}).toArray(), Student.collection.find({}).toArray(),
   ]);
@@ -151,6 +156,7 @@ async function migrateAssignments(models = {}) {
     for(const dup of matches.slice(1)){await AssignmentSubmission.collection.updateOne({_id:dup._id},{$set:{migrationQuarantinedAt:dup.migrationQuarantinedAt||new Date(),migrationQuarantineReason:`Duplicate assignment/student submission; retained ${keep._id}.`.slice(0,500)}});duplicatesQuarantined+=1;}
   }
   const indexCreated=await ensureSubmissionIndex(AssignmentSubmission);
+  droppedIndexes = await dropConflictingSubmissionIndexes(AssignmentSubmission);
   return {assignmentsScanned:assignmentRows.length,assignmentsNormalized,assignmentsQuarantined,submissionsScanned:submissionRows.length,submissionsNormalized,submissionsQuarantined,duplicateGroups,duplicatesQuarantined,droppedIndexes,indexCreated};
 }
 

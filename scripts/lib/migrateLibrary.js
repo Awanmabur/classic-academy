@@ -1,3 +1,4 @@
+const { dropIndexIfPresent, listIndexesIfCollectionExists } = require("./indexReconciler");
 const { str, exactRegex, uniqueCode } = require("../../src/services/tenant/libraryService");
 
 async function findStudent(Student, legacy = {}) {
@@ -139,13 +140,33 @@ async function syncInventory(models, books) {
 
 async function dropLegacyIndexes(models) {
   let dropped = 0;
+
   const Loan = models.LibraryLoan;
+
   if (Loan) {
-    const indexes = await Loan.collection.indexes().catch(()=>[]);
+    const indexes =
+      await listIndexesIfCollectionExists(
+        Loan.collection
+      );
+
     for (const idx of indexes) {
-      if (idx.unique && idx.partialFilterExpression?.status === "issued") { await Loan.collection.dropIndex(idx.name).catch(()=>null); dropped += 1; }
+      if (
+        idx.unique &&
+        idx.partialFilterExpression?.status ===
+          "issued"
+      ) {
+        if (
+          await dropIndexIfPresent(
+            Loan.collection,
+            idx.name
+          )
+        ) {
+          dropped += 1;
+        }
+      }
     }
   }
+
   return dropped;
 }
 

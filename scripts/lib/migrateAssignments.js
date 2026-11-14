@@ -1,3 +1,4 @@
+const { dropIndexIfPresent, listIndexesIfCollectionExists } = require("./indexReconciler");
 const { safeHttpUrl, normalizeAssignmentStatus, normalizeSubmissionStatus } = require("../../src/services/tenant/assignmentService");
 
 const SUBMISSION_INDEX_NAME = "uniq_active_assignment_student_submission";
@@ -24,19 +25,59 @@ function keysEqual(a = {}, b = {}) {
   return JSON.stringify(Object.entries(a)) === JSON.stringify(Object.entries(b));
 }
 
-async function dropConflictingSubmissionIndexes(AssignmentSubmission) {
-  if (!AssignmentSubmission?.collection?.indexes || !AssignmentSubmission?.collection?.dropIndex) return 0;
-  let indexes=[]; try { indexes=await AssignmentSubmission.collection.indexes(); } catch { return 0; }
-  let dropped=0;
-  for(const idx of indexes){
-    if(idx.name==="_id_")continue;
-    const sameKey=keysEqual(idx.key,SUBMISSION_INDEX_KEY);
-    if(!sameKey&&idx.name!==SUBMISSION_INDEX_NAME)continue;
-    const partial=idx.partialFilterExpression||{};
-    const desired=idx.name===SUBMISSION_INDEX_NAME&&idx.unique===true&&Object.prototype.hasOwnProperty.call(partial,"migrationQuarantinedAt");
-    if(desired)continue;
-    await AssignmentSubmission.collection.dropIndex(idx.name); dropped+=1;
+async function dropConflictingSubmissionIndexes(
+  AssignmentSubmission
+) {
+  if (!AssignmentSubmission?.collection) {
+    return 0;
   }
+
+  const indexes =
+    await listIndexesIfCollectionExists(
+      AssignmentSubmission.collection
+    );
+
+  let dropped = 0;
+
+  for (const idx of indexes) {
+    if (idx.name === "_id_") continue;
+
+    const sameKey =
+      keysEqual(
+        idx.key,
+        SUBMISSION_INDEX_KEY
+      );
+
+    if (
+      !sameKey &&
+      idx.name !== SUBMISSION_INDEX_NAME
+    ) {
+      continue;
+    }
+
+    const partial =
+      idx.partialFilterExpression || {};
+
+    const desired =
+      idx.name === SUBMISSION_INDEX_NAME &&
+      idx.unique === true &&
+      Object.prototype.hasOwnProperty.call(
+        partial,
+        "migrationQuarantinedAt"
+      );
+
+    if (desired) continue;
+
+    if (
+      await dropIndexIfPresent(
+        AssignmentSubmission.collection,
+        idx.name
+      )
+    ) {
+      dropped += 1;
+    }
+  }
+
   return dropped;
 }
 

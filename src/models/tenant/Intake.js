@@ -23,7 +23,7 @@ module.exports = (conn) => {
       term: { type: String, default: "" }, // e.g. "Term 1" or "Semester 1"
 
       status: { type: String, enum: ["draft", "open", "closed", "archived"], default: "draft", index: true },
-      isActive: { type: Boolean, default: false, index: true }, // only one active intake recommended
+      isActive: { type: Boolean, default: false }, // only one active intake recommended
 
       applicationOpenDate: { type: Date, default: null },
       applicationCloseDate: { type: Date, default: null },

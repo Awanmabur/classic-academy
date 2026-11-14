@@ -1,3 +1,4 @@
+const { dropIndexIfPresent, listIndexesIfCollectionExists } = require("./indexReconciler");
 const { hashSnapshot } = require("../../src/services/tenant/transcriptService");
 
 const INDEX_NAME = "uniq_issued_transcript_number";
@@ -35,20 +36,52 @@ function keysEqual(a = {}, b = {}) {
 }
 
 async function dropConflictingTranscriptIndexes(Transcript) {
-  if (!Transcript?.collection?.indexes || !Transcript?.collection?.dropIndex) return 0;
-  let indexes = [];
-  try { indexes = await Transcript.collection.indexes(); } catch { return 0; }
+  if (!Transcript?.collection) return 0;
+
+  const indexes =
+    await listIndexesIfCollectionExists(
+      Transcript.collection
+    );
+
   let dropped = 0;
+
   for (const idx of indexes) {
     if (idx.name === "_id_") continue;
-    const sameKey = keysEqual(idx.key, INDEX_KEY);
-    if (!sameKey && idx.name !== INDEX_NAME) continue;
-    const partial = idx.partialFilterExpression || {};
-    const desired = idx.name === INDEX_NAME && idx.unique === true && partial.issuedAt?.$type === "date" && Object.prototype.hasOwnProperty.call(partial, "migrationQuarantinedAt");
+
+    const sameKey =
+      keysEqual(idx.key, INDEX_KEY);
+
+    if (
+      !sameKey &&
+      idx.name !== INDEX_NAME
+    ) {
+      continue;
+    }
+
+    const partial =
+      idx.partialFilterExpression || {};
+
+    const desired =
+      idx.name === INDEX_NAME &&
+      idx.unique === true &&
+      partial.issuedAt?.$type === "date" &&
+      Object.prototype.hasOwnProperty.call(
+        partial,
+        "migrationQuarantinedAt"
+      );
+
     if (desired) continue;
-    await Transcript.collection.dropIndex(idx.name);
-    dropped += 1;
+
+    if (
+      await dropIndexIfPresent(
+        Transcript.collection,
+        idx.name
+      )
+    ) {
+      dropped += 1;
+    }
   }
+
   return dropped;
 }
 

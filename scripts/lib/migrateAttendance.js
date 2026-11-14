@@ -1,3 +1,4 @@
+const { dropIndexIfPresent, listIndexesIfCollectionExists } = require("./indexReconciler");
 const mongoose = require("mongoose");
 const { normalizeAttendanceStatus, attendanceDateFromSession, str, idText } = require("../../src/services/tenant/attendanceService");
 
@@ -8,11 +9,66 @@ const validId=(v)=>mongoose.Types.ObjectId.isValid(String(v||""));
 function legacyStatus(row={}){try{return normalizeAttendanceStatus(row.status||row.attendanceStatus||row.state||"present");}catch{return null;}}
 function legacySession(row={}){const v=row.sessionAt||row.date||row.attendanceDate||row.sessionDate||row.createdAt;const d=v?new Date(v):null;return d&&!Number.isNaN(d.getTime())?d:null;}
 
-async function dropConflictingIndexes(Attendance){
-  if(!Attendance?.collection?.indexes)return 0;let dropped=0;const indexes=await Attendance.collection.indexes();
-  for(const idx of indexes){if(idx.name==="_id_")continue;const key=idx.key||{};const same=Number(key.student)===1&&Number(key.subject)===1&&Number(key.sessionAt)===1;const partial=idx.partialFilterExpression||{};const desired=same&&idx.unique===true&&partial.isDeleted===false&&Object.prototype.hasOwnProperty.call(partial,"migrationQuarantinedAt");if(desired)continue;if(idx.unique&&(same||("student" in key&&"subject" in key&&"sessionAt" in key))){await Attendance.collection.dropIndex(idx.name);dropped+=1;}}
+async function dropConflictingIndexes(Attendance) {
+  if (!Attendance?.collection) return 0;
+
+  const indexes =
+    await listIndexesIfCollectionExists(
+      Attendance.collection
+    );
+
+  let dropped = 0;
+
+  for (const idx of indexes) {
+    if (idx.name === "_id_") continue;
+
+    const key = idx.key || {};
+
+    const same =
+      Number(key.student) === 1 &&
+      Number(key.subject) === 1 &&
+      Number(key.sessionAt) === 1;
+
+    const partial =
+      idx.partialFilterExpression || {};
+
+    const desired =
+      same &&
+      idx.unique === true &&
+      partial.isDeleted === false &&
+      Object.prototype.hasOwnProperty.call(
+        partial,
+        "migrationQuarantinedAt"
+      );
+
+    if (desired) continue;
+
+    const conflicts =
+      idx.unique &&
+      (
+        same ||
+        (
+          "student" in key &&
+          "subject" in key &&
+          "sessionAt" in key
+        )
+      );
+
+    if (!conflicts) continue;
+
+    if (
+      await dropIndexIfPresent(
+        Attendance.collection,
+        idx.name
+      )
+    ) {
+      dropped += 1;
+    }
+  }
+
   return dropped;
 }
+
 async function ensureIndex(Attendance){if(!Attendance?.collection?.createIndex)return false;await Attendance.collection.createIndex(INDEX_KEY,{unique:true,name:INDEX_NAME,partialFilterExpression:{isDeleted:false,migrationQuarantinedAt:null}});return true;}
 
 function preferredScore(row={}){return [row.isDeleted?0:1,Math.max(0,Number(row.revision||0)),new Date(row.correctedAt||row.updatedAt||row.createdAt||0).getTime()||0];}

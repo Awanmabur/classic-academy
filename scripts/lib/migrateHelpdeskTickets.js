@@ -1,3 +1,4 @@
+const { dropIndexIfPresent, listIndexesIfCollectionExists } = require("./indexReconciler");
 const {
   normalizeCategory,
   normalizePriority,
@@ -125,16 +126,21 @@ async function migrateHelpdeskTickets(HelpdeskTicket) {
     updated += 1;
   }
 
-  let indexes = [];
-  try {
-    indexes = await collection.listIndexes().toArray();
-  } catch (err) {
-    if (err?.codeName !== 'NamespaceNotFound' && err?.code !== 26) throw err;
-  }
+  const indexes =
+    await listIndexesIfCollectionExists(
+      collection
+    );
 
   for (const index of indexes) {
-    if (isTicketNoIndex(index) && index.unique !== true && index.name) {
-      await collection.dropIndex(index.name);
+    if (
+      isTicketNoIndex(index) &&
+      index.unique !== true &&
+      index.name
+    ) {
+      await dropIndexIfPresent(
+        collection,
+        index.name
+      );
     }
   }
 

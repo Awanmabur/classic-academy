@@ -31,7 +31,25 @@ test('parent attendance and child detail use canonical student ownership field o
   const bulk=read('src/controllers/tenant/parents/attendanceController.js');
   assert.match(bulk, /getParent\(req\)/);
   assert.match(bulk, /parent\?\.childrenStudentIds/);
-  assert.match(bulk, /Attendance\.find\(\{ student: \{ \$in: childIds \}, isDeleted: \{ \$ne: true \}, migrationQuarantinedAt: null \}\)/);
+  assert.match(
+    bulk,
+    /childIds\.length\s*\?\s*Attendance\.find\(studentAttendanceFilter\(\{ \$in: childIds \}\)\)/
+  );
+
+  // Check the actual MongoDB predicate produced by the shared helper.
+  // Only linked children may be queried; deleted and quarantined
+  // attendance records must remain excluded.
+  const { studentAttendanceFilter } = require('../src/services/tenant/attendanceService');
+  const linkedIds = ['linked-child-a', 'linked-child-b'];
+
+  assert.deepEqual(
+    studentAttendanceFilter({ $in: linkedIds }),
+    {
+      student: { $in: linkedIds },
+      isDeleted: { $ne: true },
+      migrationQuarantinedAt: null,
+    }
+  );
   assert.doesNotMatch(bulk, /Attendance\.find\(\{ studentId:/);
   const child=read('src/controllers/tenant/parents/childViewsController.js');
   assert.match(child, /canAccessChild\(parent, studentId\)/);

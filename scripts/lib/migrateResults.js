@@ -1,3 +1,4 @@
+const { dropIndexIfPresent, listIndexesIfCollectionExists } = require("./indexReconciler");
 const RESULT_INDEX_KEY = Object.freeze({ exam: 1, student: 1 });
 const RESULT_INDEX_NAME = "uniq_active_result_exam_student";
 const PUBLISHED_WORDS = new Set(["published", "released", "final", "approved", "issued", "visible"]);
@@ -85,19 +86,52 @@ function keysEqual(a = {}, b = {}) {
 }
 
 async function dropConflictingResultIndexes(Result) {
-  if (!Result?.collection?.indexes || !Result?.collection?.dropIndex) return 0;
-  let indexes = [];
-  try { indexes = await Result.collection.indexes(); } catch { return 0; }
+  if (!Result?.collection) return 0;
+
+  const indexes =
+    await listIndexesIfCollectionExists(
+      Result.collection
+    );
+
   let dropped = 0;
+
   for (const idx of indexes) {
     if (idx.name === "_id_") continue;
-    const sameKey = keysEqual(idx.key, RESULT_INDEX_KEY);
-    if (!sameKey && idx.name !== RESULT_INDEX_NAME) continue;
-    const desired = idx.name === RESULT_INDEX_NAME && idx.unique === true && idx.partialFilterExpression && Object.prototype.hasOwnProperty.call(idx.partialFilterExpression, "migrationQuarantinedAt");
+
+    const sameKey =
+      keysEqual(
+        idx.key,
+        RESULT_INDEX_KEY
+      );
+
+    if (
+      !sameKey &&
+      idx.name !== RESULT_INDEX_NAME
+    ) {
+      continue;
+    }
+
+    const desired =
+      idx.name === RESULT_INDEX_NAME &&
+      idx.unique === true &&
+      idx.partialFilterExpression &&
+      Object.prototype.hasOwnProperty.call(
+        idx.partialFilterExpression,
+        "migrationQuarantinedAt"
+      );
+
     if (desired) continue;
-    await Result.collection.dropIndex(idx.name);
-    dropped += 1;
+
+    if (
+      await dropIndexIfPresent(
+        Result.collection,
+        idx.name
+      )
+    ) {
+      dropped += 1;
+    }
   }
+
   return dropped;
 }
 

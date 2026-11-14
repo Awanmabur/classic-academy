@@ -263,20 +263,62 @@ async function main() {
     totals.failed += result.failed;
   }
 
-  await Promise.allSettled(tenantConnections.map((conn) => conn.close()));
-  await platformConnection.close();
-  await mongoose.disconnect().catch(() => {});
-
-  console.log(`Index creation complete: ${totals.ok} model(s) ok, ${totals.failed} failed.`);
+  /*
+   * Publish the authoritative result before connection shutdown.
+   * A maintenance command must expose success/failure even if a
+   * driver close operation behaves unexpectedly during teardown.
+   */
+  console.log(
+    `Index creation complete: ${totals.ok} model(s) ok, ${totals.failed} failed.`
+  );
 
   if (totals.failed > 0) {
     process.exitCode = 1;
   }
+
+  await Promise.allSettled(
+    tenantConnections.map((conn) => conn.close())
+  );
+
+  await platformConnection.close().catch((err) => {
+    console.warn(
+      "Platform connection close warning:",
+      err?.message || err
+    );
+  });
+
+  await mongoose.disconnect().catch((err) => {
+    console.warn(
+      "Mongoose disconnect warning:",
+      err?.message || err
+    );
+  });
 }
 
 main().catch(async (err) => {
-  console.error("Index creation failed:", err.message || err);
-  await platformConnection.close().catch(() => {});
-  await mongoose.disconnect().catch(() => {});
-  process.exit(1);
+  console.error(
+    "Index creation failed:",
+    err?.message || err
+  );
+
+  /*
+   * Set the failure status before cleanup for the same reason:
+   * cleanup must never be able to turn a failed migration into
+   * an apparent successful process exit.
+   */
+  process.exitCode = 1;
+
+  await platformConnection.close().catch((closeErr) => {
+    console.warn(
+      "Platform connection close warning:",
+      closeErr?.message || closeErr
+    );
+  });
+
+  await mongoose.disconnect().catch((closeErr) => {
+    console.warn(
+      "Mongoose disconnect warning:",
+      closeErr?.message || closeErr
+    );
+  });
 });

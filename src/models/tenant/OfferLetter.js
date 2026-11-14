@@ -31,7 +31,7 @@ module.exports = (conn) => {
       requirementsSnapshot: { type: [Schema.Types.Mixed], default: [] },
 
       status: { type: String, enum: ["draft", "sent", "void"], default: "draft", index: true },
-      currentKey: { type: String, trim: true, maxlength: 90, default: null, index: true },
+      currentKey: { type: String, trim: true, maxlength: 90, default: null },
       revision: { type: Number, default: 1, min: 1 },
 
       deliveryStatus: { type: String, enum: ["not_sent", "sending", "sent", "failed"], default: "not_sent", index: true },

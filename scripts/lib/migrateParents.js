@@ -1,3 +1,4 @@
+const { dropIndexIfPresent, listIndexesIfCollectionExists } = require("./indexReconciler");
 const mongoose = require('mongoose');
 
 const clean = (v, max = 120) => String(v ?? '').trim().replace(/\s+/g, ' ').slice(0, max);
@@ -13,16 +14,32 @@ function normalizeLegacyStatus(value) {
 }
 
 async function dropLegacyParentIndexes(Parent) {
-  const indexes = await Parent.collection.indexes().catch(() => []);
+  const indexes =
+    await listIndexesIfCollectionExists(
+      Parent.collection
+    );
+
   for (const index of indexes) {
-    if (index.name === '_id_') continue;
+    if (index.name === "_id_") continue;
+
     const keys = index.key || {};
-    const isEmail = Object.keys(keys).length === 1 && keys.email === 1;
-    const isUser = Object.keys(keys).length === 1 && keys.userId === 1;
-    if ((isEmail || isUser) && !index.partialFilterExpression) {
-      await Parent.collection.dropIndex(index.name).catch((err) => {
-        if (!['IndexNotFound', 27].includes(err?.codeName) && err?.code !== 27) throw err;
-      });
+
+    const isEmail =
+      Object.keys(keys).length === 1 &&
+      keys.email === 1;
+
+    const isUser =
+      Object.keys(keys).length === 1 &&
+      keys.userId === 1;
+
+    if (
+      (isEmail || isUser) &&
+      !index.partialFilterExpression
+    ) {
+      await dropIndexIfPresent(
+        Parent.collection,
+        index.name
+      );
     }
   }
 }

@@ -160,7 +160,12 @@ async function dropConflictingExamIndexes(Exam) {
     if (
       await dropIndexIfPresent(
         Exam.collection,
-        idx.name
+        idx.name,
+        {
+          replacementName: EXAM_INDEX_NAME,
+          replacementFields: EXAM_INDEX_KEY,
+          replacementOptions: { unique: true, name: EXAM_INDEX_NAME, partialFilterExpression: { archivedAt: null } },
+        }
       )
     ) {
       dropped += 1;
@@ -193,7 +198,7 @@ async function migrateExams(models = {}) {
   const { Exam, Class, Section, Stream, Subject, Result } = models;
   if (!Exam || !Class || !Subject) return { skipped: true, reason: "Exam, Class and Subject models are required" };
 
-  const droppedIndexes = await dropConflictingExamIndexes(Exam);
+  let droppedIndexes = 0;
   const [rawExams, classes, sections, streams, subjects] = await Promise.all([
     Exam.collection.find({}).toArray(),
     Class.collection.find({}).toArray(),
@@ -302,6 +307,7 @@ async function migrateExams(models = {}) {
   }
 
   await ensureExamIndex(Exam);
+  droppedIndexes = await dropConflictingExamIndexes(Exam);
   return { scanned: rawExams.length, normalized, archivedUnresolved, duplicateGroups, duplicatesArchived, droppedIndexes, indexEnsured: true };
 }
 

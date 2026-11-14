@@ -315,26 +315,42 @@ function isIndexNotFound(err) {
 
 async function dropIndexIfPresent(
   collection,
-  name
+  name,
+  { replacementName, replacementFields, replacementOptions = {} } = {}
 ) {
+  if (!name || name === "_id_") {
+    const error = new Error("Refusing to drop an unnamed or primary index.");
+    error.code = "INDEX_MAINTENANCE_REQUIRED";
+    throw error;
+  }
+
+  const indexes = await listIndexesIfCollectionExists(collection);
+  if (!indexes.some((index) => index.name === name)) return false;
+
+  // Legacy migrations must never remove a live index without first
+  // building and verifying its replacement. An operator must handle
+  // incompatible same-name definitions in a controlled maintenance window.
+  const replacement = replacementName && replacementName !== name &&
+    indexes.find((index) =>
+      index.name === replacementName &&
+      sameIndex(index, replacementFields, replacementOptions)
+    );
+  if (!replacement) {
+    const error = new Error(
+      `Refusing to drop ${name}: a compatible replacement must be built and verified first.`
+    );
+    error.code = "INDEX_MAINTENANCE_REQUIRED";
+    throw error;
+  }
+
   try {
     await collection.dropIndex(name);
     return true;
-  } catch (err) {
-    /*
-     * Another reconciliation path may already have
-     * removed the conflicting index after indexes()
-     * was read. That means the desired end state is
-     * still achievable and this is not a failure.
-     */
-    if (isIndexNotFound(err)) {
-      return false;
-    }
-
-    throw err;
+  } catch (error) {
+    if (isIndexNotFound(error)) return false;
+    throw error;
   }
 }
-
 
 function isNamespaceNotFound(err) {
   return (
@@ -446,55 +462,54 @@ async function ensureCollectionIndex(
       )
   );
 
-  const dropped = [];
-
-  for (const item of conflicts) {
-    const removed =
-      await dropIndexIfPresent(
-        collection,
-        item.name
-      );
-
-    if (removed) {
-      dropped.push(item.name);
-    }
+  // Same-name option changes cannot be safely rebuilt in-place.
+  // Never drop the existing index merely to make createIndex() succeed.
+  if (conflicts.some((item) => item.name === desiredName)) {
+    const error = new Error(
+      `Index ${desiredName} has incompatible options under the same name. ` +
+      "A planned maintenance cutover and verified backup are required."
+    );
+    error.code = "INDEX_MAINTENANCE_REQUIRED";
+    throw error;
   }
 
-  /*
-   * A parallel path may have created the desired
-   * index while conflicts were being removed.
-   */
-  indexes = await collection.indexes();
+  // Build first, without dropping the previous constraint or query index.
+  // MongoDB permits some side-by-side index definitions, but rejects others.
+  // If the server rejects the build, leave every old index untouched.
+  const createdName = await collection.createIndex(fields, options);
 
+  if (!conflicts.length) {
+    return { status: "created", name: createdName || desiredName, dropped: [] };
+  }
+
+  // A successful driver return is not enough to authorize destructive work:
+  // verify the exact definition on MongoDB before removing the old index.
+  indexes = await collection.indexes();
   exact = indexes.find((item) =>
+    item.name === (createdName || desiredName) &&
     sameIndex(item, fields, options)
   );
-
-  if (exact) {
-    return {
-      status: dropped.length
-        ? "replaced"
-        : "existing",
-      name: exact.name,
-      dropped,
-    };
+  if (!exact) {
+    const error = new Error(
+      `New index ${desiredName} could not be verified; old indexes were kept.`
+    );
+    error.code = "INDEX_REPLACEMENT_UNVERIFIED";
+    throw error;
   }
 
-  const createdName =
-    await collection.createIndex(
-      fields,
-      options
-    );
+  const dropped = [];
+  for (const item of conflicts) {
+    const removed = await dropIndexIfPresent(collection, item.name, {
+      replacementName: exact.name,
+      replacementFields: fields,
+      replacementOptions: options,
+    });
+    if (removed) dropped.push(item.name);
+  }
 
   return {
-    status: dropped.length
-      ? "replaced"
-      : "created",
-
-    name:
-      createdName ||
-      desiredName,
-
+    status: dropped.length ? "replaced" : "existing",
+    name: exact.name,
     dropped,
   };
 }

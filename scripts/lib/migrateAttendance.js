@@ -59,7 +59,12 @@ async function dropConflictingIndexes(Attendance) {
     if (
       await dropIndexIfPresent(
         Attendance.collection,
-        idx.name
+        idx.name,
+        {
+          replacementName: INDEX_NAME,
+          replacementFields: INDEX_KEY,
+          replacementOptions: { unique: true, name: INDEX_NAME, partialFilterExpression: { isDeleted: false, migrationQuarantinedAt: null } },
+        }
       )
     ) {
       dropped += 1;
@@ -76,7 +81,7 @@ function comparePreferred(a,b){const aa=preferredScore(a),bb=preferredScore(b);f
 
 async function migrateAttendance(models={},options={}){
   const {Attendance,Student,Subject,Class,Section,Stream}=models; if(!Attendance||!Student||!Subject||!Class||!Section||!Stream)return{skipped:true,reason:"Attendance, Student, Subject, Class, Section and Stream models are required"};
-  const timezone=options.timezone||"UTC";const droppedIndexes=await dropConflictingIndexes(Attendance);
+  const timezone=options.timezone||"UTC";let droppedIndexes=0;
   const [rows,students,subjects,classes,sections,streams]=await Promise.all([Attendance.collection.find({}).toArray(),Student.collection.find({}).toArray(),Subject.collection.find({}).toArray(),Class.collection.find({}).toArray(),Section.collection.find({}).toArray(),Stream.collection.find({}).toArray()]);
   const byStudentId=new Map(students.map((x)=>[idText(x._id),x])),byReg=new Map(students.map((x)=>[str(x.regNo,60),x]).filter(([k])=>k));
   const bySubjectId=new Map(subjects.map((x)=>[idText(x._id),x])),bySubjectCode=new Map(subjects.map((x)=>[str(x.code,40).toUpperCase(),x]).filter(([k])=>k));
@@ -92,6 +97,7 @@ async function migrateAttendance(models={},options={}){
   }
   const groups=new Map();for(const row of normalized){if(row.isDeleted||row.migrationQuarantinedAt||!row.student||!row.subject||!row.sessionAt)continue;const key=`${idText(row.student)}:${idText(row.subject)}:${new Date(row.sessionAt).toISOString()}`;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(row);}let duplicateGroups=0,duplicatesQuarantined=0;
   for(const matches of groups.values()){if(matches.length<2)continue;duplicateGroups+=1;matches.sort(comparePreferred);const keep=matches[0];for(const dup of matches.slice(1)){await Attendance.collection.updateOne({_id:dup._id},{$set:{migrationQuarantinedAt:dup.migrationQuarantinedAt||new Date(),migrationQuarantineReason:`Duplicate attendance row; retained ${keep._id}.`.slice(0,500)}});duplicatesQuarantined+=1;}}
-  const indexCreated=await ensureIndex(Attendance);return{scanned,normalized:normalizedCount,quarantined,duplicateGroups,duplicatesQuarantined,droppedIndexes,indexCreated};
+  const indexCreated=await ensureIndex(Attendance);
+  droppedIndexes = await dropConflictingIndexes(Attendance);return{scanned,normalized:normalizedCount,quarantined,duplicateGroups,duplicatesQuarantined,droppedIndexes,indexCreated};
 }
 module.exports={INDEX_NAME,INDEX_KEY,legacyStatus,legacySession,dropConflictingIndexes,ensureIndex,migrateAttendance};

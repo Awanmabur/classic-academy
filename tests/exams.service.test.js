@@ -189,12 +189,13 @@ test('exam migration converts legacy rows, keeps the result-bearing duplicate, a
   ];
   const dropped = [];
   const createdIndexes = [];
+  let liveIndexes = [{ name: '_id_', key: { _id: 1 } }, { name: 'old_exam_unique', key: EXAM_INDEX_KEY, unique: true }];
   const Exam = { collection: {
     find: () => ({ toArray: async () => rows }),
     updateOne: async (filter, update) => { const row = rows.find((x) => x._id === filter._id); Object.assign(row, update.$set); },
-    indexes: async () => [{ name: '_id_', key: { _id: 1 } }, { name: 'old_exam_unique', key: EXAM_INDEX_KEY, unique: true }],
-    dropIndex: async (name) => dropped.push(name),
-    createIndex: async (key, options) => createdIndexes.push({ key, options }),
+    indexes: async () => liveIndexes.map((index) => ({ ...index })),
+    dropIndex: async (name) => { dropped.push(name); liveIndexes = liveIndexes.filter((index) => index.name !== name); },
+    createIndex: async (key, options) => { createdIndexes.push({ key, options }); liveIndexes.push({ name: options.name, key, unique: options.unique, partialFilterExpression: options.partialFilterExpression }); return options.name; },
   } };
   const Class = { collection: { find: () => ({ toArray: async () => [{ _id: classId, code: 'S1', name: 'Senior One', academicYear: '2026', term: 1 }] }) } };
   const Subject = { collection: { find: () => ({ toArray: async () => [{ _id: subjectId, code: 'MAT', title: 'Mathematics', classId }] }) } };

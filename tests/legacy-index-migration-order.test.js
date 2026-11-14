@@ -35,5 +35,5 @@ test("all legacy index drops are guarded and fail closed without verified replac
   assert.match(src, /INDEX_MAINTENANCE_REQUIRED/);
   assert.match(src, /INDEX_REPLACEMENT_UNVERIFIED/);
   assert.match(src, /replacementName && replacementName !== name/);
-  assert.match(src, /await collection\.createIndex\(fields, options\)/);
+  assert.match(src, /await collection\.createIndex\(\s*fields,\s*options\s*\)/);
 });

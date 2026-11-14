@@ -125,7 +125,12 @@ async function dropConflictingResultIndexes(Result) {
     if (
       await dropIndexIfPresent(
         Result.collection,
-        idx.name
+        idx.name,
+        {
+          replacementName: RESULT_INDEX_NAME,
+          replacementFields: RESULT_INDEX_KEY,
+          replacementOptions: { unique: true, name: RESULT_INDEX_NAME, partialFilterExpression: { migrationQuarantinedAt: null } },
+        }
       )
     ) {
       dropped += 1;
@@ -172,7 +177,7 @@ async function migrateResults(models = {}) {
   const { Result, Exam, Student } = models;
   if (!Result || !Exam || !Student) return { skipped: true, reason: "Result, Exam and Student models are required" };
 
-  const droppedIndexes = await dropConflictingResultIndexes(Result);
+  let droppedIndexes = 0;
   const [rawResults, exams, students] = await Promise.all([
     Result.collection.find({}).toArray(),
     Exam.collection.find({}).toArray(),
@@ -261,6 +266,7 @@ async function migrateResults(models = {}) {
   }
 
   await ensureResultIndex(Result);
+  droppedIndexes = await dropConflictingResultIndexes(Result);
   return { scanned: rawResults.length, normalized, quarantined, duplicateGroups, duplicatesQuarantined, droppedIndexes, indexEnsured: true };
 }
 

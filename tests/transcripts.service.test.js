@@ -163,7 +163,7 @@ class FakeCollection {
   async updateOne(filter, update) { const row=this.rows.find((r)=>String(r._id)===String(filter._id)); if(!row)return{matchedCount:0}; Object.assign(row, update.$set||{}); return{matchedCount:1}; }
   async indexes(){ return this._indexes.map((i)=>({...i})); }
   async dropIndex(name){ this.dropped.push(name); this._indexes=this._indexes.filter((i)=>i.name!==name); }
-  async createIndex(key, options){ this.created.push({key:{...key},options:{...options}}); return options.name; }
+  async createIndex(key, options){ this.created.push({key:{...key},options:{...options}}); this._indexes.push({name:options.name,key:{...key},unique:options.unique,sparse:options.sparse,partialFilterExpression:options.partialFilterExpression}); return options.name; }
 }
 
 test('transcript migration preserves strongest duplicate issue number and quarantines unsafe legacy rows', async () => {

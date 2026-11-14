@@ -75,7 +75,12 @@ async function dropConflictingTranscriptIndexes(Transcript) {
     if (
       await dropIndexIfPresent(
         Transcript.collection,
-        idx.name
+        idx.name,
+        {
+          replacementName: INDEX_NAME,
+          replacementFields: INDEX_KEY,
+          replacementOptions: { unique: true, name: INDEX_NAME, partialFilterExpression: { issuedAt: { $type: "date" }, migrationQuarantinedAt: null } },
+        }
       )
     ) {
       dropped += 1;
@@ -116,7 +121,7 @@ async function migrateTranscripts(models = {}) {
   const { Transcript, Student } = models;
   if (!Transcript || !Student) return { skipped: true, reason: "Transcript and Student models are required" };
 
-  const droppedIndexes = await dropConflictingTranscriptIndexes(Transcript);
+  let droppedIndexes = 0;
   const [rows, students] = await Promise.all([
     Transcript.collection.find({}).toArray(),
     Student.collection.find({}).toArray(),
@@ -189,6 +194,7 @@ async function migrateTranscripts(models = {}) {
   }
 
   const indexCreated = await ensureTranscriptIndex(Transcript);
+  droppedIndexes = await dropConflictingTranscriptIndexes(Transcript);
   return { scanned: rows.length, normalized, quarantined, duplicateGroups, duplicatesQuarantined, droppedIndexes, indexCreated };
 }
 

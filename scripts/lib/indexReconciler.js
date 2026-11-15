@@ -240,11 +240,11 @@ function sameIndex(existing, fields, options = {}) {
 // completely; specialized indexes require an explicit maintenance review.
 function equivalentIndexWithDifferentName(existing, fields, options = {}) {
   const allowedDesired = new Set([
-    "name", "unique", "sparse", "partialFilterExpression",
+    "name", "unique", "sparse", "partialFilterExpression", "background",
   ]);
   const allowedExisting = new Set([
     "v", "ns", "name", "key", "unique", "sparse",
-    "partialFilterExpression",
+    "partialFilterExpression", "background",
   ]);
 
   if (

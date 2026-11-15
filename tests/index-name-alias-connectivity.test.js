@@ -46,6 +46,22 @@ test("PlatformConfig reuses a unique B-tree index with an equivalent legacy name
   assert.deepEqual(collection.changes, []);
 });
 
+test("legacy index alias remains equivalent when only background build option differs", async () => {
+  const collection = collectionWith({
+    name: "singletonKey_1",
+    key: { singletonKey: 1 },
+    unique: true,
+  });
+  const result = await ensureCollectionIndex(
+    collection,
+    { singletonKey: 1 },
+    { name: "uniq_platform_config_singleton", unique: true, background: true }
+  );
+  assert.equal(result.status, "existing");
+  assert.equal(result.name, "singletonKey_1");
+  assert.deepEqual(collection.changes, []);
+});
+
 test("PlatformConfig schema defines singleton uniqueness only once", () => {
   const mongoose = require("mongoose");
   const connection = mongoose.createConnection();

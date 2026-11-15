@@ -85,5 +85,3 @@
     }, { threshold: 0.12 });
 
     document.querySelectorAll(".feature, .hero, .reveal").forEach(el => io.observe(el));
-
-  

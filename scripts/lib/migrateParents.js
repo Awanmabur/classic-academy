@@ -1,3 +1,4 @@
+const { dropIndexIfPresent, listIndexesIfCollectionExists } = require("./indexReconciler");
 const mongoose = require('mongoose');
 
 const clean = (v, max = 120) => String(v ?? '').trim().replace(/\s+/g, ' ').slice(0, max);
@@ -13,16 +14,32 @@ function normalizeLegacyStatus(value) {
 }
 
 async function dropLegacyParentIndexes(Parent) {
-  const indexes = await Parent.collection.indexes().catch(() => []);
+  const indexes =
+    await listIndexesIfCollectionExists(
+      Parent.collection
+    );
+
   for (const index of indexes) {
-    if (index.name === '_id_') continue;
+    if (index.name === "_id_") continue;
+
     const keys = index.key || {};
-    const isEmail = Object.keys(keys).length === 1 && keys.email === 1;
-    const isUser = Object.keys(keys).length === 1 && keys.userId === 1;
-    if ((isEmail || isUser) && !index.partialFilterExpression) {
-      await Parent.collection.dropIndex(index.name).catch((err) => {
-        if (!['IndexNotFound', 27].includes(err?.codeName) && err?.code !== 27) throw err;
-      });
+
+    const isEmail =
+      Object.keys(keys).length === 1 &&
+      keys.email === 1;
+
+    const isUser =
+      Object.keys(keys).length === 1 &&
+      keys.userId === 1;
+
+    if (
+      (isEmail || isUser) &&
+      !index.partialFilterExpression
+    ) {
+      await dropIndexIfPresent(
+        Parent.collection,
+        index.name
+      );
     }
   }
 }
@@ -121,26 +138,54 @@ async function migrateParents(models = {}) {
         }
       }
       if (user) {
-        const children = Array.from(new Set((parent.childrenStudentIds || []).map(String).filter(isId)));
-        const set = { childrenStudentIds: children };
+        const children = Array.from(
+          new Set((parent.childrenStudentIds || []).map(String).filter(isId)),
+        );
+
+        const currentChildren = (user.childrenStudentIds || []).map(String);
+        const sameChildren =
+          currentChildren.length === children.length &&
+          currentChildren.every((id, index) => id === children[index]);
+
+        const set = {};
         const inc = {};
+
+        if (!sameChildren) {
+          set.childrenStudentIds = children;
+        }
+
         if (['suspended', 'archived'].includes(parent.status)) {
           // Never claim ownership of an account that was already manually/security suspended.
           if (user.status !== 'suspended') {
-            set.parentAccessPreviousStatus = ['invited', 'active'].includes(user.status) ? user.status : 'active';
+            set.parentAccessPreviousStatus = ['invited', 'active'].includes(user.status)
+              ? user.status
+              : 'active';
             set.parentAccessSuspended = true;
             set.status = 'suspended';
             inc.tokenVersion = 1;
           }
-        } else if (['active', 'on_hold'].includes(parent.status) && user.parentAccessSuspended === true) {
-          set.status = ['invited', 'active'].includes(user.parentAccessPreviousStatus) ? user.parentAccessPreviousStatus : 'active';
+        } else if (
+          ['active', 'on_hold'].includes(parent.status) &&
+          user.parentAccessSuspended === true
+        ) {
+          set.status = ['invited', 'active'].includes(user.parentAccessPreviousStatus)
+            ? user.parentAccessPreviousStatus
+            : 'active';
           set.parentAccessSuspended = false;
           set.parentAccessPreviousStatus = null;
           inc.tokenVersion = 1;
         }
-        const update = { $set: set };
-        if (inc.tokenVersion) update.$inc = inc;
-        await User.updateOne({ _id: user._id, deletedAt: null }, update);
+
+        if (Object.keys(set).length || inc.tokenVersion) {
+          const update = {};
+          if (Object.keys(set).length) update.$set = set;
+          if (inc.tokenVersion) update.$inc = inc;
+
+          await User.updateOne(
+            { _id: user._id, deletedAt: null },
+            update,
+          );
+        }
       }
     }
 

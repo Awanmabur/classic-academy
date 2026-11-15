@@ -22,8 +22,8 @@ function locked(name) { return lock.packages?.[`node_modules/${name}`]?.version 
 test("release removes unused vulnerable image/utility direct dependencies and upgrades Nodemailer", () => {
   assert.equal(pkg.dependencies.sharp, undefined);
   assert.equal(pkg.dependencies.lodash, undefined);
-  assert.match(pkg.dependencies.nodemailer, /^\^9\./);
-  assert.ok(atLeast(locked("nodemailer"), "9.0.6"));
+  assert.match(pkg.dependencies.nodemailer, /^\^10\./);
+  assert.ok(atLeast(locked("nodemailer"), "10.3.1"));
 });
 
 test("release lock carries patched production dependency minimums", () => {

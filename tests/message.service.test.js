@@ -29,7 +29,7 @@ function emptyAudienceModels() {
       MessageRecipient: {
         aggregate: async () => [],
         deleteMany: async (filter) => { deletions.push(filter); return { deletedCount: 0 }; },
-        countDocuments: async () => 0,
+        aggregate: async () => [],
         bulkWrite: async () => ({ ok: 1 }),
         updateOne: async () => ({ modifiedCount: 0 }),
       },
@@ -96,12 +96,7 @@ test("opening a delivered message updates the canonical recipient and delivery s
       MessageRecipient: {
         aggregate: async () => [{ recipients: 1, delivered: 1, opened: 1, failed: 0 }],
         updateOne: async (filter, patch) => { recipientUpdates.push({ filter, patch }); return { modifiedCount: 1 }; },
-        countDocuments: async (filter) => {
-          if (filter.status === "Opened") return 1;
-          if (filter.status === "Failed") return 0;
-          if (filter.status?.$in) return 1;
-          return 1;
-        },
+        aggregate: async () => [{ recipients: 1, delivered: 1, opened: 1, failed: 0 }],
       },
       Message: { updateOne: async (filter, patch) => { messageUpdates.push({ filter, patch }); return { matchedCount: 1 }; } },
     },

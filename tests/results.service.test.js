@@ -162,6 +162,7 @@ class FakeCollection {
   }
   async createIndex(key, options) {
     this.created.push({ key: { ...key }, options: { ...options } });
+    this._indexes.push({ name: options.name, key: { ...key }, unique: options.unique, sparse: options.sparse, partialFilterExpression: options.partialFilterExpression });
     return options.name;
   }
 }

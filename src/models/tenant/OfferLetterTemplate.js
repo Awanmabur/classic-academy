@@ -9,7 +9,7 @@ module.exports = (conn) => {
   const OfferLetterTemplateSchema = new Schema(
     {
       name: { type: String, required: true, trim: true, maxlength: 80 },
-      singletonKey: { type: String, trim: true, maxlength: 40, default: null, index: true },
+      singletonKey: { type: String, trim: true, maxlength: 40, default: null },
       isActive: { type: Boolean, default: true, index: true },
 
       subject: { type: String, required: true, trim: true, maxlength: 160 },

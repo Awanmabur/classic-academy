@@ -49,6 +49,3 @@
         }, { threshold: 0.12 });
 
         document.querySelectorAll(".reveal").forEach(el => io.observe(el));
-
-
-     

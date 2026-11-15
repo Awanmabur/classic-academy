@@ -56,21 +56,39 @@ test('SystemHealth partial unique index uses Mongo-supported equality and migrat
   assert.match(migration, /isDeleted:r\.isDeleted===true/);
 });
 
-test('index reconciler replaces stale same-key index only after uniqueness preflight', async () => {
+test('index reconciler builds and verifies the unique replacement before dropping a legacy index', async () => {
   const calls = [];
+  let indexes = [
+    { name: '_id_', key: { _id: 1 } },
+    { name: 'userId_1', key: { userId: 1 } },
+  ];
   const collection = {
-    indexes: async () => [{ name: '_id_', key: { _id: 1 } }, { name: 'userId_1', key: { userId: 1 } }],
+    indexes: async () => indexes,
     aggregate: () => ({ toArray: async () => [] }),
-    dropIndex: async (name) => { calls.push(['drop', name]); },
-    createIndex: async (fields, options) => { calls.push(['create', fields, options]); return options.name; },
+    dropIndex: async (name) => {
+      calls.push(['drop', name]);
+      indexes = indexes.filter((item) => item.name !== name);
+    },
+    createIndex: async (fields, options) => {
+      calls.push(['create', fields, options]);
+      indexes.push({
+        name: options.name,
+        key: fields,
+        unique: options.unique,
+        partialFilterExpression: options.partialFilterExpression,
+      });
+      return options.name;
+    },
   };
   const result = await ensureCollectionIndex(collection, { userId: 1 }, {
     name: 'uniq_active_student_user', unique: true,
     partialFilterExpression: { isDeleted: false, userId: { $type: 'objectId' } },
   });
   assert.equal(result.status, 'replaced');
-  assert.deepEqual(calls[0], ['drop', 'userId_1']);
-  assert.equal(calls[1][0], 'create');
+  assert.equal(calls[0][0], 'create');
+  assert.deepEqual(calls[1], ['drop', 'userId_1']);
+  assert.ok(indexes.some((item) => item.name === 'uniq_active_student_user'));
+  assert.ok(!indexes.some((item) => item.name === 'userId_1'));
 });
 
 test('index reconciler never drops an old index when duplicate data would make the new unique index unsafe', async () => {

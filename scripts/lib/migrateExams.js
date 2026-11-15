@@ -1,3 +1,4 @@
+const { dropIndexIfPresent, listIndexesIfCollectionExists } = require("./indexReconciler");
 const ACTIVE_STATUSES = new Set(["draft", "scheduled", "completed"]);
 const EXAM_TYPES = new Set(["test", "quiz", "midterm", "endterm", "mock", "practical", "oral", "assignment"]);
 const EXAM_INDEX_KEY = Object.freeze({
@@ -123,19 +124,54 @@ function keysEqual(a = {}, b = {}) {
 }
 
 async function dropConflictingExamIndexes(Exam) {
-  if (!Exam?.collection?.indexes || !Exam?.collection?.dropIndex) return 0;
-  let indexes = [];
-  try { indexes = await Exam.collection.indexes(); } catch { return 0; }
+  if (!Exam?.collection) return 0;
+
+  const indexes =
+    await listIndexesIfCollectionExists(
+      Exam.collection
+    );
+
   let dropped = 0;
+
   for (const idx of indexes) {
     if (idx.name === "_id_") continue;
-    const sameKey = keysEqual(idx.key, EXAM_INDEX_KEY);
-    if (!sameKey && idx.name !== EXAM_INDEX_NAME) continue;
-    const desired = idx.name === EXAM_INDEX_NAME && idx.unique === true && idx.partialFilterExpression && Object.prototype.hasOwnProperty.call(idx.partialFilterExpression, "archivedAt");
+
+    const sameKey =
+      keysEqual(idx.key, EXAM_INDEX_KEY);
+
+    if (
+      !sameKey &&
+      idx.name !== EXAM_INDEX_NAME
+    ) {
+      continue;
+    }
+
+    const desired =
+      idx.name === EXAM_INDEX_NAME &&
+      idx.unique === true &&
+      idx.partialFilterExpression &&
+      Object.prototype.hasOwnProperty.call(
+        idx.partialFilterExpression,
+        "archivedAt"
+      );
+
     if (desired) continue;
-    await Exam.collection.dropIndex(idx.name);
-    dropped += 1;
+
+    if (
+      await dropIndexIfPresent(
+        Exam.collection,
+        idx.name,
+        {
+          replacementName: EXAM_INDEX_NAME,
+          replacementFields: EXAM_INDEX_KEY,
+          replacementOptions: { unique: true, name: EXAM_INDEX_NAME, partialFilterExpression: { archivedAt: null } },
+        }
+      )
+    ) {
+      dropped += 1;
+    }
   }
+
   return dropped;
 }
 
@@ -162,7 +198,7 @@ async function migrateExams(models = {}) {
   const { Exam, Class, Section, Stream, Subject, Result } = models;
   if (!Exam || !Class || !Subject) return { skipped: true, reason: "Exam, Class and Subject models are required" };
 
-  const droppedIndexes = await dropConflictingExamIndexes(Exam);
+  let droppedIndexes = 0;
   const [rawExams, classes, sections, streams, subjects] = await Promise.all([
     Exam.collection.find({}).toArray(),
     Class.collection.find({}).toArray(),
@@ -271,6 +307,7 @@ async function migrateExams(models = {}) {
   }
 
   await ensureExamIndex(Exam);
+  droppedIndexes = await dropConflictingExamIndexes(Exam);
   return { scanned: rawExams.length, normalized, archivedUnresolved, duplicateGroups, duplicatesArchived, droppedIndexes, indexEnsured: true };
 }
 

@@ -1,3 +1,4 @@
+const { dropIndexIfPresent, listIndexesIfCollectionExists } = require("./indexReconciler");
 const {
   uniqueCode,
   str,
@@ -188,17 +189,40 @@ async function syncOccupancy(models, rooms) {
   return { roomsSynced, unresolvedActive };
 }
 
-async function dropLegacyAllocationIndex(HostelAllocation) {
+async function dropLegacyAllocationIndex(
+  HostelAllocation
+) {
   if (!HostelAllocation) return 0;
+
   let dropped = 0;
-  const indexes = await HostelAllocation.collection.indexes().catch(() => []);
+
+  const indexes =
+    await listIndexesIfCollectionExists(
+      HostelAllocation.collection
+    );
+
   for (const index of indexes) {
-    const keys = Object.keys(index.key || {});
-    if (index.unique && keys.includes("academicYear") && keys.includes("semester") && keys.includes("student")) {
-      await HostelAllocation.collection.dropIndex(index.name).catch(() => null);
+    const keys =
+      Object.keys(index.key || {});
+
+    const legacy =
+      index.unique &&
+      keys.includes("academicYear") &&
+      keys.includes("semester") &&
+      keys.includes("student");
+
+    if (!legacy) continue;
+
+    if (
+      await dropIndexIfPresent(
+        HostelAllocation.collection,
+        index.name
+      )
+    ) {
       dropped += 1;
     }
   }
+
   return dropped;
 }
 

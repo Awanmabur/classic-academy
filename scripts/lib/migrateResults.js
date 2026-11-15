@@ -1,3 +1,4 @@
+const { dropIndexIfPresent, listIndexesIfCollectionExists } = require("./indexReconciler");
 const RESULT_INDEX_KEY = Object.freeze({ exam: 1, student: 1 });
 const RESULT_INDEX_NAME = "uniq_active_result_exam_student";
 const PUBLISHED_WORDS = new Set(["published", "released", "final", "approved", "issued", "visible"]);
@@ -85,19 +86,57 @@ function keysEqual(a = {}, b = {}) {
 }
 
 async function dropConflictingResultIndexes(Result) {
-  if (!Result?.collection?.indexes || !Result?.collection?.dropIndex) return 0;
-  let indexes = [];
-  try { indexes = await Result.collection.indexes(); } catch { return 0; }
+  if (!Result?.collection) return 0;
+
+  const indexes =
+    await listIndexesIfCollectionExists(
+      Result.collection
+    );
+
   let dropped = 0;
+
   for (const idx of indexes) {
     if (idx.name === "_id_") continue;
-    const sameKey = keysEqual(idx.key, RESULT_INDEX_KEY);
-    if (!sameKey && idx.name !== RESULT_INDEX_NAME) continue;
-    const desired = idx.name === RESULT_INDEX_NAME && idx.unique === true && idx.partialFilterExpression && Object.prototype.hasOwnProperty.call(idx.partialFilterExpression, "migrationQuarantinedAt");
+
+    const sameKey =
+      keysEqual(
+        idx.key,
+        RESULT_INDEX_KEY
+      );
+
+    if (
+      !sameKey &&
+      idx.name !== RESULT_INDEX_NAME
+    ) {
+      continue;
+    }
+
+    const desired =
+      idx.name === RESULT_INDEX_NAME &&
+      idx.unique === true &&
+      idx.partialFilterExpression &&
+      Object.prototype.hasOwnProperty.call(
+        idx.partialFilterExpression,
+        "migrationQuarantinedAt"
+      );
+
     if (desired) continue;
-    await Result.collection.dropIndex(idx.name);
-    dropped += 1;
+
+    if (
+      await dropIndexIfPresent(
+        Result.collection,
+        idx.name,
+        {
+          replacementName: RESULT_INDEX_NAME,
+          replacementFields: RESULT_INDEX_KEY,
+          replacementOptions: { unique: true, name: RESULT_INDEX_NAME, partialFilterExpression: { migrationQuarantinedAt: null } },
+        }
+      )
+    ) {
+      dropped += 1;
+    }
   }
+
   return dropped;
 }
 
@@ -138,7 +177,7 @@ async function migrateResults(models = {}) {
   const { Result, Exam, Student } = models;
   if (!Result || !Exam || !Student) return { skipped: true, reason: "Result, Exam and Student models are required" };
 
-  const droppedIndexes = await dropConflictingResultIndexes(Result);
+  let droppedIndexes = 0;
   const [rawResults, exams, students] = await Promise.all([
     Result.collection.find({}).toArray(),
     Exam.collection.find({}).toArray(),
@@ -227,6 +266,7 @@ async function migrateResults(models = {}) {
   }
 
   await ensureResultIndex(Result);
+  droppedIndexes = await dropConflictingResultIndexes(Result);
   return { scanned: rawResults.length, normalized, quarantined, duplicateGroups, duplicatesQuarantined, droppedIndexes, indexEnsured: true };
 }
 

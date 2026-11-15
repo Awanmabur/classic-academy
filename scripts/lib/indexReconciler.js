@@ -234,6 +234,32 @@ function sameIndex(existing, fields, options = {}) {
   return true;
 }
 
+// An existing index may have a different name but identical enforcement and
+// query behavior. Reuse it rather than dropping/rebuilding just to rename.
+// Limit this optimization to ordinary B-tree index options we can compare
+// completely; specialized indexes require an explicit maintenance review.
+function equivalentIndexWithDifferentName(existing, fields, options = {}) {
+  const allowedDesired = new Set([
+    "name", "unique", "sparse", "partialFilterExpression",
+  ]);
+  const allowedExisting = new Set([
+    "v", "ns", "name", "key", "unique", "sparse",
+    "partialFilterExpression",
+  ]);
+
+  if (
+    Object.keys(options).some((key) => !allowedDesired.has(key)) ||
+    Object.keys(existing || {}).some((key) => !allowedExisting.has(key)) ||
+    Object.values(fields).some((value) => value !== 1 && value !== -1)
+  ) {
+    return false;
+  }
+
+  const withoutName = { ...options };
+  delete withoutName.name;
+  return sameIndex(existing, fields, withoutName);
+}
+
 function duplicateMatch(fields, options = {}) {
   if (options.partialFilterExpression) {
     return options.partialFilterExpression;
@@ -413,6 +439,22 @@ async function ensureCollectionIndex(
     };
   }
 
+  // A compatible index may already exist under a legacy name.
+  // Do not treat a naming difference alone as a reason to rebuild it.
+  // Do not mask an incompatible index already using the desired name.
+  if (!indexes.some((item) => item.name === desiredName)) {
+    const equivalent = indexes.find((item) =>
+      equivalentIndexWithDifferentName(item, fields, options)
+    );
+    if (equivalent) {
+      return {
+        status: "existing",
+        name: equivalent.name,
+        dropped: [],
+      };
+    }
+  }
+
   /*
    * Validate unique-index safety before replacing
    * any existing index.
@@ -451,6 +493,22 @@ async function ensureCollectionIndex(
       name: exact.name,
       dropped: [],
     };
+  }
+
+  // A compatible index may already exist under a legacy name.
+  // Do not treat a naming difference alone as a reason to rebuild it.
+  // Do not mask an incompatible index already using the desired name.
+  if (!indexes.some((item) => item.name === desiredName)) {
+    const equivalent = indexes.find((item) =>
+      equivalentIndexWithDifferentName(item, fields, options)
+    );
+    if (equivalent) {
+      return {
+        status: "existing",
+        name: equivalent.name,
+        dropped: [],
+      };
+    }
   }
 
   const conflicts = indexes.filter(

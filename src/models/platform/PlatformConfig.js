@@ -33,7 +33,7 @@ module.exports = (connection) => {
 
   const PlatformConfigSchema = new Schema(
     {
-      singletonKey: { type: String, default: "platform", unique: true, immutable: true, maxlength: 40 },
+      singletonKey: { type: String, default: "platform", immutable: true, maxlength: 40 },
       revision: { type: Number, default: 1, min: 1 },
       general: { type: GeneralSchema, default: () => ({}) },
       branding: { type: BrandingSchema, default: () => ({}) },

@@ -56,6 +56,7 @@ const { migrateOrganizationCatalog } = require("./lib/migrateOrganizationCatalog
 const { migratePlatformSaas } = require("./lib/migratePlatformSaas");
 const { migratePlatformOperations } = require("./lib/migratePlatformOperations");
 const { indexName, ensureCollectionIndex } = require("./lib/indexReconciler");
+const { isDatabaseConnectivityError } = require("./lib/isDatabaseConnectivityError");
 
 const platformModelNames = [
   "Tenant",
@@ -114,6 +115,9 @@ async function createModelIndexes(scope, models) {
       } catch (err) {
         failed += 1;
         console.error(`[failed] ${scope}.${name}.${desiredName}: ${err.message || err}`);
+        // The connection is gone: abort rather than emitting hundreds of
+        // duplicate index errors against an unreachable MongoDB server.
+        if (isDatabaseConnectivityError(err)) throw err;
       }
     }
   }
